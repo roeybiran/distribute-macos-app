@@ -32,7 +32,7 @@ program
       await checkDmgDependencies();
       await checkNotaryCredentials(keychainProfile);
       await checkSparklePrivateKey();
-      console.log(chalk.green('✓ All dependencies checked successfully'));
+      console.log(chalk.green('✓ All Dependencies OK'));
       
       const { exportedAppPath, productName, version, teamId, derivedDataPath } = await build(srcDir, scheme, destination);
       const { dmgPath } = await dmg({ exportedAppPath, productName, version, keychainProfile, teamId });

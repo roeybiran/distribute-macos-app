@@ -1,17 +1,13 @@
-import { mkdirSync, writeFileSync, readdirSync } from 'fs';
-import { join} from 'path';
-import chalk from 'chalk';
-import plist from 'plist';
-import { execa } from 'execa';
-import prompts from 'prompts';
-import { XCODE_PATHS, APP_PATHS } from './constants.js';
-import { getSigningIdentity } from './util/getSigningIdentity.js';
+import { mkdirSync, writeFileSync, readdirSync } from "fs";
+import { join } from "path";
+import chalk from "chalk";
+import plist from "plist";
+import { execa } from "execa";
+import prompts from "prompts";
+import { XCODE_PATHS, APP_PATHS } from "./constants.js";
+import { getSigningIdentity } from "./util/getSigningIdentity.js";
 
-export const build = async (
-  srcDir,
-  schemeName,
-  destinationSpecifier
-) => {
+export const build = async (srcDir, schemeName, destinationSpecifier) => {
   // Check if directory contains .xcodeproj
   const files = readdirSync(srcDir);
   if (!files.some((file) => file.endsWith(".xcodeproj"))) {
@@ -23,28 +19,41 @@ export const build = async (
 
   // Get build settings
   console.log(chalk.green("==> Gathering build settings..."));
-  const { stdout: buildSettingsOutput } = await execa("xcodebuild", [
-    "-showBuildSettings",
-    "-scheme", schemeName,
-    "-derivedDataPath", derivedDataPath,
-  ], { cwd: srcDir });
+  const { stdout } = await execa(
+    "xcodebuild",
+    [
+      "-showBuildSettings",
+      "-scheme",
+      schemeName,
+      "-derivedDataPath",
+      derivedDataPath,
+      "-configuration",
+      "Release",
+      "-destination",
+      destinationSpecifier,
+      "-json",
+      "-quiet",
+    ],
+    { cwd: srcDir }
+  );
 
-  // Parse build settings into an object
-  const buildSettings = buildSettingsOutput
-    .split("\n")
-    .reduce((settings, line) => {
-      const [key, value] = line.split(" = ").map((part) => part.trim());
-      settings[key] = value;
-      return settings;
-    }, {});
+  let json;
+  try {
+    json = JSON.parse(stdout);
+  } catch (error) {
+    console.log(stdout);
+    throw error;
+  }
 
-  const scheme = schemeName;
-  const productName = buildSettings.PRODUCT_NAME;
-  const teamId = buildSettings.DEVELOPMENT_TEAM;
-  const version = buildSettings.MARKETING_VERSION;
-  const buildVersion = buildSettings.CURRENT_PROJECT_VERSION;
+  const [{
+    buildSettings: {
+      PRODUCT_NAME: productName,
+      DEVELOPMENT_TEAM: teamId,
+      MARKETING_VERSION: version,
+      CURRENT_PROJECT_VERSION: buildVersion,
+    },
+  }] = json;
 
-  // Validate required build settings
   const missingSettings = [];
   if (!productName) missingSettings.push("PRODUCT_NAME");
   if (!teamId) missingSettings.push("DEVELOPMENT_TEAM");
@@ -58,7 +67,7 @@ export const build = async (
   }
 
   // Check signing identity before building
-  console.log(chalk.blue('==> Checking code signing identity...'));
+  console.log(chalk.blue("==> Checking code signing identity..."));
   await getSigningIdentity(teamId);
 
   // Set up paths
@@ -78,16 +87,18 @@ export const build = async (
   const exportedAppPath = join(exportPath, `${productName}.app`);
 
   // Check Git status
-  const { stdout: gitStatus } = await execa("git", ["status", "-s"], { cwd: srcDir });
-  const { stdout: currentBranch } = await execa("git", [
-    "rev-parse",
-    "--abbrev-ref",
-    "HEAD",
-  ], { cwd: srcDir });
+  const { stdout: gitStatus } = await execa("git", ["status", "-s"], {
+    cwd: srcDir,
+  });
+  const { stdout: currentBranch } = await execa(
+    "git",
+    ["rev-parse", "--abbrev-ref", "HEAD"],
+    { cwd: srcDir }
+  );
 
   // Log build information
   console.log(chalk.green(`==> Team ID: ${teamId}`));
-  console.log(chalk.green(`==> Scheme: ${scheme}`));
+  console.log(chalk.green(`==> Scheme: ${schemeName}`));
   console.log(chalk.green(`==> Product name: ${productName}`));
   console.log(chalk.green(`==> Version: ${version}`));
   console.log(chalk.green(`==> Build: ${buildVersion}`));
@@ -100,14 +111,16 @@ export const build = async (
     )
   );
 
-  const { value: confirmed } = await prompts({
-    type: "confirm",
+  const { value } = await prompts({
+    type: "toggle",
     name: "value",
     message: "Is this OK?",
-    initial: false,
+    initial: true,
+    active: "Yes",
+    inactive: "No",
   });
 
-  if (!confirmed) {
+  if (!value) {
     throw new Error("Build cancelled by user");
   }
 
@@ -116,7 +129,11 @@ export const build = async (
   mkdirSync(exportPath, { recursive: true });
 
   console.log(chalk.green("==> Cleaning..."));
-  await execa("xcodebuild", ["clean", "-scheme", scheme, "-derivedDataPath", derivedDataPath], { cwd: srcDir });
+  await execa(
+    "xcodebuild",
+    ["clean", "-scheme", schemeName, "-derivedDataPath", derivedDataPath],
+    { cwd: srcDir }
+  );
 
   console.log(chalk.green("==> Archiving..."));
   await execa(
@@ -128,10 +145,11 @@ export const build = async (
       "-destination",
       destinationSpecifier,
       "-scheme",
-      scheme,
+      schemeName,
       "-archivePath",
       xcArchivePath,
-      "-derivedDataPath", derivedDataPath,
+      "-derivedDataPath",
+      derivedDataPath,
     ],
     { stdio: "inherit", cwd: srcDir }
   );
