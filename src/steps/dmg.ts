@@ -1,9 +1,9 @@
 import { execa } from 'execa';
 import { join, dirname } from 'path';
 import chalk from 'chalk';
-import { getSigningIdentity } from './util/getSigningIdentity.js';
-import { checkNotaryCredentials } from './util/checkNotaryCredentials.js';
-import { checkDmgDependencies } from './util/checkDmgDependencies.js';
+import { getSigningIdentity } from '../util/getSigningIdentity.ts';
+import { checkNotaryCredentials } from '../util/checkNotaryCredentials.ts';
+import { checkDmgDependencies } from '../util/checkDmgDependencies.ts';
 
 export const dmg = async ({ exportedAppPath, productName, version, keychainProfile, teamId }) => {
   await checkDmgDependencies()

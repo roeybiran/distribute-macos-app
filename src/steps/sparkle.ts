@@ -5,7 +5,7 @@ import { join, basename } from 'path';
 import prettier from "@prettier/sync";
 import yaml from "js-yaml";
 import markdownit from "markdown-it";
-import { checkSparklePrivateKey } from './util/checkSparklePrivateKey.js';
+import { checkSparklePrivateKey } from '../util/checkSparklePrivateKey.ts';
 
 export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage, derivedDataPath }) => {
   await checkSparklePrivateKey()
@@ -17,7 +17,8 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
       changelogToHtml(changelogPath, changelogBasename, outDir);
       console.log(chalk.green('==> Generated release notes from changelog.yml'));
     } catch (error) {
-      console.log(chalk.red(`==> Error generating release notes: ${error.message}`));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(chalk.red(`==> Error generating release notes: ${errorMessage}`));
     }
   } else {
     throw new Error(chalk.red(`No changelog.yml found (looked for ${changelogPath})`));
@@ -42,14 +43,15 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
     process.exit(1);
   }
 
-  await execa(appcastTool, [
-    '--full-release-notes-url',
-    fullReleaseNotesUrl,
-    '--link',
-    appHomepage,
-    '--auto-prune-update-files',
-    outDir
-  ], { stdio: 'inherit' });
+  const args = ['--auto-prune-update-files', outDir];
+  if (fullReleaseNotesUrl) {
+    args.unshift('--full-release-notes-url', fullReleaseNotesUrl);
+  }
+  if (appHomepage) {
+    args.unshift('--link', appHomepage);
+  }
+  
+  await execa(appcastTool, args, { stdio: 'inherit' });
 
   console.log(chalk.green('==> Deleting partial release note files...'));
   const changelogFiles = globSync(`${changelogBasename} *.html`, { cwd: outDir });
@@ -148,7 +150,8 @@ const changelogToHtml = (changelogPath, appName, outDir) => {
     writeFileSync(join(outDir, `${appName}.html`), formatHtml(fullChangelog));
 
   } catch (error) {
-    throw new Error(`Failed to convert changelog to HTML: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to convert changelog to HTML: ${errorMessage}`);
   }
 }
 
@@ -161,7 +164,7 @@ const makeSection = (entry, type) => {
     change: "Changes",
     fix: "Fixes",
     issue: "Known Issues",
-  };
+  } as const;
 
   const listItems = items.map(itemToHtml).join("");
 
@@ -222,7 +225,8 @@ const formatHtml = (html) => {
   try {
     return prettier.format(html, { parser: "html" });
   } catch (error) {
-    console.warn("Failed to format HTML:", error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn("Failed to format HTML:", errorMessage);
     return html; // Return original HTML if formatting fails
   }
 }

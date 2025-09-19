@@ -1,12 +1,14 @@
+#!/usr/bin/env node
+
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { join } from 'path';
-import { build } from './build.js';
-import { dmg } from './dmg.js';
-import { sparkle } from './sparkle.js';
-import { checkSparklePrivateKey } from './util/checkSparklePrivateKey.js';
-import { checkNotaryCredentials } from './util/checkNotaryCredentials.js';
-import { checkDmgDependencies } from './util/checkDmgDependencies.js';
+import { build } from './steps/build.ts';
+import { dmg } from './steps/dmg.ts';
+import { sparkle } from './steps/sparkle.ts';
+import { checkSparklePrivateKey } from './util/checkSparklePrivateKey.ts';
+import { checkNotaryCredentials } from './util/checkNotaryCredentials.ts';
+import { checkDmgDependencies } from './util/checkDmgDependencies.ts';
 
 const program = new Command();
 
@@ -25,7 +27,15 @@ program
   .option('--destination <destination-specifier>', 'Destination device specifier', 'generic/platform=macOS')
   .option('--full-release-notes-url <url>', 'URL for full release notes')
   .option('--app-homepage <url>', 'App homepage URL')
-  .action(async ({ srcDir, scheme, keychainProfile, outDir, fullReleaseNotesUrl, appHomepage, destination }) => {
+  .action(async ({ srcDir, scheme, keychainProfile, outDir, fullReleaseNotesUrl, appHomepage, destination }: {
+    srcDir: string;
+    scheme: string;
+    keychainProfile: string;
+    outDir: string;
+    fullReleaseNotesUrl?: string;
+    appHomepage?: string;
+    destination: string;
+  }) => {
     try {
       // Run dependency checks at the beginning
       console.log(chalk.blue('==> Checking dependencies...'));
@@ -38,7 +48,8 @@ program
       const { dmgPath } = await dmg({ exportedAppPath, productName, version, keychainProfile, teamId });
       await sparkle({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage, derivedDataPath });
     } catch (error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red(`Error: ${errorMessage}`));
       process.exit(1);
     }
   });
@@ -51,13 +62,20 @@ program
   .requiredOption('--out-dir <path>', 'Directory for Sparkle files')
   .option('--full-release-notes-url <url>', 'URL for full release notes')
   .option('--app-homepage <url>', 'App homepage URL')
-  .action(async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage }) => {
+  .action(async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage }: {
+    dmgPath: string;
+    srcDir: string;
+    outDir: string;
+    fullReleaseNotesUrl?: string;
+    appHomepage?: string;
+  }) => {
     try {
       // For standalone sparkle command, use the project's .build directory
       const derivedDataPath = join(srcDir, '.build');
       await sparkle({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage, derivedDataPath });
     } catch (error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red(`Error: ${errorMessage}`));
       process.exit(1);
     }
   });

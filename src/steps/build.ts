@@ -4,10 +4,10 @@ import chalk from "chalk";
 import plist from "plist";
 import { execa } from "execa";
 import prompts from "prompts";
-import { XCODE_PATHS, APP_PATHS } from "./constants.js";
-import { getSigningIdentity } from "./util/getSigningIdentity.js";
+import { XCODE_PATHS, APP_PATHS } from "../constants.ts";
+import { getSigningIdentity } from "../util/getSigningIdentity.ts";
 
-export const build = async (srcDir, schemeName, destinationSpecifier) => {
+export const build = async (srcDir: string, schemeName: string, destinationSpecifier: string) => {
   // Check if directory contains .xcodeproj
   const files = readdirSync(srcDir);
   if (!files.some((file) => file.endsWith(".xcodeproj"))) {
@@ -37,7 +37,7 @@ export const build = async (srcDir, schemeName, destinationSpecifier) => {
     { cwd: srcDir }
   );
 
-  let json;
+  let json: any;
   try {
     json = JSON.parse(stdout);
   } catch (error) {
@@ -54,7 +54,7 @@ export const build = async (srcDir, schemeName, destinationSpecifier) => {
     },
   }] = json;
 
-  const missingSettings = [];
+  const missingSettings: string[] = [];
   if (!productName) missingSettings.push("PRODUCT_NAME");
   if (!teamId) missingSettings.push("DEVELOPMENT_TEAM");
   if (!version) missingSettings.push("MARKETING_VERSION");

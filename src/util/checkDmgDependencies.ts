@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 import chalk from 'chalk';
 
-export const checkDmgDependencies = async () => {
+export const checkDmgDependencies = async (): Promise<void> => {
   const dependencies = ['create-dmg', 'gm', 'magick'];
   for (const dep of dependencies) {
     try {

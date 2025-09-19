@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 import chalk from 'chalk';
 
-export const checkSparklePrivateKey = async () => {
+export const checkSparklePrivateKey = async (): Promise<void> => {
   try {
     await execa('security', ['find-generic-password', '-l', 'Private key for signing Sparkle updates']);
   } catch {

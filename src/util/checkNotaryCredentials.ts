@@ -1,6 +1,6 @@
 import { execa } from 'execa';
 
-export const checkNotaryCredentials = async (profile) => {
+export const checkNotaryCredentials = async (profile: string): Promise<void> => {
   try {
     await execa('xcrun', ['notarytool', 'history', '-p', profile]);
   } catch {
