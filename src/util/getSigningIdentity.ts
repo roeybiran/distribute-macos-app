@@ -1,5 +1,5 @@
 import { execa } from 'execa';
-import chalk from 'chalk';
+import { red, green } from './colors.ts';
 
 export const getSigningIdentity = async (teamId: string): Promise<string> => {
   const { stdout } = await execa('security', ['find-identity', '-vp', 'codesigning']);
@@ -20,13 +20,13 @@ export const getSigningIdentity = async (teamId: string): Promise<string> => {
   const identity = identities[0];
 
   if (!identity) {
-    throw new Error(chalk.red('No codesign identity found. Aborting.'));
+    throw new Error('No codesign identity found. Aborting.');
   } else if (identities.length > 1) {
-    console.log(chalk.green('==>'), 'Found multiple suitable codesigning identities. Using the first:');
+    green('==> Found multiple suitable codesigning identities. Using the first:');
   } else {
-    console.log(chalk.green('==>'), 'Using codesigning identity:');
+    green('==> Using codesigning identity:');
   }
-  console.log(chalk.green('==>'), identity);
+  green(`==> ${identity}`);
 
   return identity;
 };

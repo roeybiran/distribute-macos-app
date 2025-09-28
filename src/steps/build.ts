@@ -1,8 +1,9 @@
 import { mkdirSync, writeFileSync, readdirSync } from "fs";
 import { join } from "path";
-import chalk from "chalk";
 import plist from "plist";
 import { execa } from "execa";
+import { green } from "../util/colors.ts";
+import { DERIVED_DATA_PATH } from "../constants.ts";
 
 export const build = async (srcDir: string, schemeName: string, destinationSpecifier: string, teamId: string) => {
   const files = readdirSync(srcDir);
@@ -10,7 +11,7 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
     throw new Error("Source directory must contain an .xcodeproj file");
   }
 
-  console.log(chalk.green("==> Gathering build settings..."));
+  green("==> Gathering build settings...");
   const { stdout } = await execa(
     "xcodebuild",
     [
@@ -40,44 +41,51 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
     },
   }] = json;
 
-  const derivedDataPath = join(srcDir, ".build/DerivedData");
+  const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
+  const archivesPath = join(srcDir, ".build/Archives");
+  const exportsPath = join(srcDir, ".build/Exports");
+
   const date = new Date();
   const timestamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
-  const archiveFolder = join(srcDir, ".build/Archives");
   const xcArchiveName = `${productName} ${timestamp}`;
-  const xcArchivePath = join(archiveFolder, `${xcArchiveName}.xcarchive`);
+  const xcArchivePath = join(archivesPath, `${xcArchiveName}.xcarchive`);
 
-  const exportPath = join(srcDir, ".build/Exports", xcArchiveName);
-  const plistPath = join(exportPath, "ExportOptions.plist");
-  const exportedAppPath = join(exportPath, `${productName}.app`);
+  const exportedArchivePath = join(exportsPath, xcArchiveName);
+  const plistPath = join(exportedArchivePath, "ExportOptions.plist");
+  const exportedAppPath = join(exportedArchivePath, `${productName}.app`);
 
-  console.log(chalk.green(`==> Team ID: ${teamId}`));
-  console.log(chalk.green(`==> Scheme: ${schemeName}`));
-  console.log(chalk.green(`==> Product name: ${productName}`));
-  console.log(chalk.green(`==> Version: ${version}`));
-  console.log(chalk.green(`==> Build: ${buildVersion}`));
-  console.log(chalk.green(`==> Archive path: ${xcArchivePath}`));
-  console.log(chalk.green(`==> Export path: ${exportPath}`));
+  green(`==> Team ID: ${teamId}`);
+  green(`==> Scheme: ${schemeName}`);
+  green(`==> Product name: ${productName}`);
+  green(`==> Version: ${version}`);
+  green(`==> Build: ${buildVersion}`);
+  green(`==> Archive path: ${xcArchivePath}`);
+  green(`==> Export path: ${exportedArchivePath}`);
 
-  mkdirSync(archiveFolder, { recursive: true });
-  mkdirSync(exportPath, { recursive: true });
+  mkdirSync(archivesPath, { recursive: true });
+  mkdirSync(exportedArchivePath, { recursive: true });
 
-  console.log(chalk.green("==> Cleaning..."));
+  const sharedSettings = [
+    "-scheme",
+    schemeName,
+    "-derivedDataPath",
+    derivedDataPath,
+    `DEVELOPMENT_TEAM=${teamId}`,
+    "CODE_SIGNING_STYLE=Manual",
+    "CODE_SIGN_IDENTITY=Developer ID Application",
+  ];
+
+  green("==> Cleaning...");
   await execa(
     "xcodebuild",
     [
-      "clean", 
-      "-scheme", 
-      schemeName, 
-      "-derivedDataPath", 
-      derivedDataPath,
-      `DEVELOPMENT_TEAM=${teamId}`,
-      `CODE_SIGNING_STYLE=Automatic`,
+      "clean",
+      ...sharedSettings,
     ],
     { cwd: srcDir }
   );
 
-  console.log(chalk.green("==> Archiving..."));
+  green("==> Archiving...");
   await execa(
     "xcodebuild",
     [
@@ -86,19 +94,14 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
       "Release",
       "-destination",
       destinationSpecifier,
-      "-scheme",
-      schemeName,
       "-archivePath",
       xcArchivePath,
-      "-derivedDataPath",
-      derivedDataPath,
-      `DEVELOPMENT_TEAM=${teamId}`,
-      "CODE_SIGNING_STYLE=Automatic",
+      ...sharedSettings,
     ],
     { stdio: "inherit", cwd: srcDir }
   );
 
-  console.log(chalk.green("==> Exporting..."));
+  green("==> Exporting...");
 
   const exportOptionsPlist = {
     destination: "export",
@@ -116,7 +119,7 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
       "-archivePath",
       xcArchivePath,
       "-exportPath",
-      exportPath,
+      exportedArchivePath,
       "-exportOptionsPlist",
       plistPath,
     ],
@@ -128,6 +131,5 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
     productName,
     version,
     teamId,
-    derivedDataPath,
   };
 };

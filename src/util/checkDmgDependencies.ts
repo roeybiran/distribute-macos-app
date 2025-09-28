@@ -1,5 +1,5 @@
 import { execa } from 'execa';
-import chalk from 'chalk';
+import { red } from './colors.ts';
 
 export const checkDmgDependencies = async (): Promise<void> => {
   const dependencies = ['create-dmg', 'gm', 'magick'];
@@ -7,7 +7,7 @@ export const checkDmgDependencies = async (): Promise<void> => {
     try {
       await execa('command', ['-v', dep]);
     } catch {
-      throw new Error(chalk.red(`${dep} is missing`));
+      throw new Error(`${dep} is missing`);
     }
   }
 };

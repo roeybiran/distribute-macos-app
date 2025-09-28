@@ -1,11 +1,11 @@
 import { execa } from 'execa';
-import chalk from 'chalk';
 import { mkdirSync, copyFileSync, unlinkSync, globSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, basename } from 'path';
 import prettier from "@prettier/sync";
 import yaml from "js-yaml";
 import markdownit from "markdown-it";
 import { checkSparklePrivateKey } from '../util/checkSparklePrivateKey.ts';
+import { red, green } from '../util/colors.ts';
 
 export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage, derivedDataPath }: {
   dmgPath: string;
@@ -22,13 +22,13 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   if (existsSync(changelogPath)) {
     try {
       changelogToHtml(changelogPath, changelogBasename, outDir);
-      console.log(chalk.green('==> Generated release notes from changelog.yml'));
+      green('==> Generated release notes from changelog.yml');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.log(chalk.red(`==> Error generating release notes: ${errorMessage}`));
+      red(`==> Error generating release notes: ${errorMessage}`);
     }
   } else {
-    throw new Error(chalk.red(`No changelog.yml found (looked for ${changelogPath})`));
+    throw new Error(`No changelog.yml found (looked for ${changelogPath})`);
   }
 
   // Create sparkle directory if it doesn't exist
@@ -37,16 +37,16 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   // Copy DMG to sparkle directory
   const dmgName = basename(dmgPath);
   const targetDmgPath = join(outDir, dmgName);
-  console.log(chalk.green(`==> Copying DMG to ${targetDmgPath}...`));
+  green(`==> Copying DMG to ${targetDmgPath}...`);
   copyFileSync(dmgPath, targetDmgPath);
 
-  console.log(chalk.green('==> Generating Appcast.xml...'));
+  green('==> Generating Appcast.xml...');
   
   // Use the Sparkle tool from derived data path
   const appcastTool = join(derivedDataPath, 'SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast');
   
   if (!existsSync(appcastTool)) {
-    throw new Error(chalk.red(`Couldn't find the Sparkle generate_appcast tool at ${appcastTool}. Make sure Sparkle framework is built. Aborting`));
+    throw new Error(`Couldn't find the Sparkle generate_appcast tool at ${appcastTool}. Make sure Sparkle framework is built. Aborting`);
   }
 
   const args = ['--auto-prune-update-files', outDir];
@@ -59,7 +59,7 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   
   await execa(appcastTool, args, { stdio: 'inherit' });
 
-  console.log(chalk.green('==> Deleting partial release note files...'));
+  green('==> Deleting partial release note files...');
   const changelogFiles = globSync(`${changelogBasename} *.html`, { cwd: outDir });
   for (const file of changelogFiles) {
     unlinkSync(join(outDir, file));

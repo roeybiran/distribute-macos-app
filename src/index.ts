@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import chalk from "chalk";
 import { Command } from "commander";
 import { join } from "path";
 import { build } from "./steps/build.ts";
@@ -11,6 +10,8 @@ import { checkNotaryCredentials } from "./util/checkNotaryCredentials.ts";
 import { checkDmgDependencies } from "./util/checkDmgDependencies.ts";
 import { execa } from "execa";
 import { getSigningIdentity } from "./util/getSigningIdentity.ts";
+import { red, blue, green } from "./util/colors.ts";
+import { DERIVED_DATA_PATH } from "./constants.ts";
 
 const program = new Command();
 
@@ -23,11 +24,6 @@ program
   .command("release")
   .description("Distribute a macOS application")
   .requiredOption("--scheme <scheme>", "Xcode scheme name")
-  .option(
-    "--out-dir <path>",
-    "Output directory, will contain the DMG and Sparkle appcast.xml file",
-    "./build/release"
-  )
   .requiredOption(
     "--keychain-profile <profile>",
     "Keychain profile for notarization"
@@ -43,26 +39,18 @@ program
     "Destination device specifier",
     "generic/platform=macOS"
   )
-  .option("--full-release-notes-url <url>", "URL for full release notes")
-  .option("--app-homepage <url>", "App homepage URL")
   .action(
     async ({
       srcDir,
       scheme,
       keychainProfile,
-      outDir,
       teamId,
-      fullReleaseNotesUrl,
-      appHomepage,
       destination,
     }: {
       srcDir: string;
       scheme: string;
       keychainProfile: string;
-      outDir: string;
       teamId: string;
-      fullReleaseNotesUrl?: string;
-      appHomepage?: string;
       destination: string;
     }) => {
       try {
@@ -90,21 +78,18 @@ program
           );
         }
 
-        console.log(chalk.blue("==> Checking create-dmg dependencies..."));
+        blue("==> Checking create-dmg dependencies...");
         await checkDmgDependencies();
 
-        console.log(chalk.blue("==> Checking Notary credentials..."));
+        blue("==> Checking Notary credentials...");
         await checkNotaryCredentials(keychainProfile);
 
-        console.log(chalk.blue("==> Checking code signing identity..."));
+        blue("==> Checking code signing identity...");
         await getSigningIdentity(teamId);
 
-        console.log(chalk.blue("==> Checking Sparkle private key..."));
-        await checkSparklePrivateKey();
+        green("✓ Prerequisites OK");
 
-        console.log(chalk.green("✓ Prerequisites OK"));
-
-        const { exportedAppPath, productName, version, derivedDataPath } =
+        const { exportedAppPath, productName, version } =
           await build(srcDir, scheme, destination, teamId);
 
         const { dmgPath } = await dmg({
@@ -115,19 +100,13 @@ program
           teamId,
         });
 
-        // await sparkle({
-        //   dmgPath,
-        //   srcDir,
-        //   outDir,
-        //   ...(fullReleaseNotesUrl ? { fullReleaseNotesUrl } : {}),
-        //   ...(appHomepage ? { appHomepage } : {}),
-        //   derivedDataPath,
-        // });
+        green("✓ DMG created:");
+        green(dmgPath);
 
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.error(chalk.red(`Error: ${errorMessage}`));
+        red(`Error: ${errorMessage}`);
         process.exit(1);
       }
     }
@@ -156,7 +135,11 @@ program
       appHomepage?: string;
     }) => {
       try {
-        const derivedDataPath = join(srcDir, ".build");
+        blue("==> Checking Sparkle private key...");
+        await checkSparklePrivateKey();
+        green("✓ Prerequisites OK");
+
+        const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
         await sparkle({
           dmgPath,
           srcDir,
@@ -168,7 +151,7 @@ program
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.error(chalk.red(`Error: ${errorMessage}`));
+        red(`Error: ${errorMessage}`);
         process.exit(1);
       }
     }
