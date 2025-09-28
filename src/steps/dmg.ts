@@ -5,7 +5,13 @@ import { getSigningIdentity } from '../util/getSigningIdentity.ts';
 import { checkNotaryCredentials } from '../util/checkNotaryCredentials.ts';
 import { checkDmgDependencies } from '../util/checkDmgDependencies.ts';
 
-export const dmg = async ({ exportedAppPath, productName, version, keychainProfile, teamId }) => {
+export const dmg = async ({ exportedAppPath, productName, version, keychainProfile, teamId }: {
+  exportedAppPath: string;
+  productName: string;
+  version: string;
+  keychainProfile: string;
+  teamId: string;
+}) => {
   await checkDmgDependencies()
   
   await checkNotaryCredentials(keychainProfile)
@@ -29,7 +35,3 @@ export const dmg = async ({ exportedAppPath, productName, version, keychainProfi
 
   return { dmgPath };
 };
-
-
-
-

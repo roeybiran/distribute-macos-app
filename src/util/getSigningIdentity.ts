@@ -16,15 +16,12 @@ export const getSigningIdentity = async (teamId: string): Promise<string> => {
       const match = line.match(/"([^"]+)"/);
       return match ? match[1] : '';
     })
-    .filter(identity => identity.length > 0);
 
-  if (!identities.length) {
+  const identity = identities[0];
+
+  if (!identity) {
     throw new Error(chalk.red('No codesign identity found. Aborting.'));
-  }
-  
-  const identity = identities[0]!;
-
-  if (identities.length > 1) {
+  } else if (identities.length > 1) {
     console.log(chalk.green('==>'), 'Found multiple suitable codesigning identities. Using the first:');
   } else {
     console.log(chalk.green('==>'), 'Using codesigning identity:');

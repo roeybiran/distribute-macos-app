@@ -7,7 +7,14 @@ import yaml from "js-yaml";
 import markdownit from "markdown-it";
 import { checkSparklePrivateKey } from '../util/checkSparklePrivateKey.ts';
 
-export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage, derivedDataPath }) => {
+export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage, derivedDataPath }: {
+  dmgPath: string;
+  srcDir: string;
+  outDir: string;
+  fullReleaseNotesUrl?: string;
+  appHomepage?: string;
+  derivedDataPath: string;
+}) => {
   await checkSparklePrivateKey()
 
   const changelogBasename = basename(srcDir);
@@ -39,8 +46,7 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   const appcastTool = join(derivedDataPath, 'SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast');
   
   if (!existsSync(appcastTool)) {
-    console.log(chalk.red(`Couldn't find the Sparkle generate_appcast tool at ${appcastTool}. Make sure Sparkle framework is built. Aborting`));
-    process.exit(1);
+    throw new Error(chalk.red(`Couldn't find the Sparkle generate_appcast tool at ${appcastTool}. Make sure Sparkle framework is built. Aborting`));
   }
 
   const args = ['--auto-prune-update-files', outDir];
@@ -60,21 +66,13 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   }
 };
 
- 
-
-
 // Configure markdown-it
 const md = markdownit({
   html: true,
   typographer: true,
 });
 
-/**
- * Converts a YAML changelog to HTML release notes
- * @param {string} changelogPath - Path to the changelog YAML file
- * @returns {string} HTML string of the release notes
- */
-const changelogToHtml = (changelogPath, appName, outDir) => {
+const changelogToHtml = (changelogPath: string, appName: string, outDir: string) => {
   try {
     const yamlContent = readFileSync(changelogPath, "utf-8");
     const entries = yaml.load(yamlContent);
@@ -104,7 +102,7 @@ const changelogToHtml = (changelogPath, appName, outDir) => {
         if (!Array.isArray(entry.note)) {
           throw new Error(`Note must be an array at index ${index}`);
         }
-        const notesContent = entry.note.map((note) => md.render(note)).join("");
+        const notesContent = entry.note.map((note: string) => md.render(note)).join("");
         notes = `<div class="note">${notesContent}</div>`;
       }
 
@@ -151,20 +149,20 @@ const changelogToHtml = (changelogPath, appName, outDir) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to convert changelog to HTML: ${errorMessage}`);
+    throw new Error(`Failed to convert CHANGELOG.yaml to HTML: ${errorMessage}`);
   }
 }
 
-const makeSection = (entry, type) => {
+const makeSection = (entry: any, type: string): string => {
   const items = entry[type];
   if (!items || !Array.isArray(items) || items.length === 0) return "";
 
-  const titles = {
+  const titles: Record<string, string> = {
     new: "New",
     change: "Changes",
     fix: "Fixes",
     issue: "Known Issues",
-  } as const;
+  }
 
   const listItems = items.map(itemToHtml).join("");
 
@@ -178,12 +176,7 @@ const makeSection = (entry, type) => {
   `.trim();
 }
 
-/**
- * Recursively converts a list item to HTML
- * @param {string|Object} item - The list item (string or object with key-value pairs)
- * @returns {string} HTML representation of the item
- */
-const itemToHtml = (item) => {
+const itemToHtml = (item: string | object): string => {
   if (typeof item === "string") {
     return `<li>${md.renderInline(item)}</li>`;
   }
@@ -198,7 +191,7 @@ const itemToHtml = (item) => {
           throw new Error(`Value for key "${key}" must be an array`);
         }
 
-        const nestedItems = value.map(itemToHtml).join("");
+        const nestedItems: string = value.map(itemToHtml).join("");
         return `
         <li>
           ${md.renderInline(key)}:
@@ -216,12 +209,7 @@ const itemToHtml = (item) => {
   );
 }
 
-/**
- * Formats HTML string using prettier
- * @param {string} html - HTML string to format
- * @returns {string} Formatted HTML string
- */
-const formatHtml = (html) => {
+const formatHtml = (html: string): string => {
   try {
     return prettier.format(html, { parser: "html" });
   } catch (error) {
@@ -236,7 +224,7 @@ const formatHtml = (html) => {
  * @param {string} version - Version string to validate
  * @returns {boolean} Whether the version is valid
  */
-const isValidSemver = (version) => {
+const isValidSemver = (version: string): boolean => {
   const semverRegex =
     /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
   return semverRegex.test(version);
