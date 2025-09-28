@@ -5,13 +5,39 @@ import { execa } from "execa";
 import { green } from "../util/colors.ts";
 import { DERIVED_DATA_PATH } from "../constants.ts";
 
-export const build = async (srcDir: string, schemeName: string, destinationSpecifier: string, teamId: string) => {
+export const build = async (
+  srcDir: string,
+  schemeName: string,
+  destinationSpecifier: string,
+  teamId: string
+) => {
+  
+  const { stdout: gitStatus } = await execa("git", ["status", "-s"], {
+    cwd: srcDir,
+  });
+  if (gitStatus.trim()) {
+    throw new Error(
+      "Git working directory is dirty. Please commit or stash changes before building."
+    );
+  }
+
+  const { stdout: currentBranch } = await execa(
+    "git",
+    ["rev-parse", "--abbrev-ref", "HEAD"],
+    { cwd: srcDir }
+  );
+  if (currentBranch.trim() !== "main" && currentBranch.trim() !== "master") {
+    throw new Error(
+      `Not on default branch (current: ${currentBranch.trim()}). Please switch to main or master branch.`
+    );
+  }
+
   const files = readdirSync(srcDir);
   if (!files.some((file) => file.endsWith(".xcodeproj"))) {
     throw new Error("Source directory must contain an .xcodeproj file");
   }
 
-  green("==> Gathering build settings...");
+  green("Gathering build settings...");
   const { stdout } = await execa(
     "xcodebuild",
     [
@@ -20,7 +46,7 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
       schemeName,
       "-configuration",
       "Release",
-      "-json"
+      "-json",
     ],
     { cwd: srcDir }
   );
@@ -33,13 +59,15 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
     throw error;
   }
 
-  const [{
-    buildSettings: {
-      PRODUCT_NAME: productName,
-      MARKETING_VERSION: version,
-      CURRENT_PROJECT_VERSION: buildVersion,
+  const [
+    {
+      buildSettings: {
+        PRODUCT_NAME: productName,
+        MARKETING_VERSION: version,
+        CURRENT_PROJECT_VERSION: buildVersion,
+      },
     },
-  }] = json;
+  ] = json;
 
   const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
   const archivesPath = join(srcDir, ".build/Archives");
@@ -54,13 +82,13 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
   const plistPath = join(exportedArchivePath, "ExportOptions.plist");
   const exportedAppPath = join(exportedArchivePath, `${productName}.app`);
 
-  green(`==> Team ID: ${teamId}`);
-  green(`==> Scheme: ${schemeName}`);
-  green(`==> Product name: ${productName}`);
-  green(`==> Version: ${version}`);
-  green(`==> Build: ${buildVersion}`);
-  green(`==> Archive path: ${xcArchivePath}`);
-  green(`==> Export path: ${exportedArchivePath}`);
+  green(`Team ID: ${teamId}`);
+  green(`Scheme: ${schemeName}`);
+  green(`Product name: ${productName}`);
+  green(`Version: ${version}`);
+  green(`Build: ${buildVersion}`);
+  green(`Archive path: ${xcArchivePath}`);
+  green(`Export path: ${exportedArchivePath}`);
 
   mkdirSync(archivesPath, { recursive: true });
   mkdirSync(exportedArchivePath, { recursive: true });
@@ -75,17 +103,10 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
     "CODE_SIGN_IDENTITY=Developer ID Application",
   ];
 
-  green("==> Cleaning...");
-  await execa(
-    "xcodebuild",
-    [
-      "clean",
-      ...sharedSettings,
-    ],
-    { cwd: srcDir }
-  );
+  green("Cleaning...");
+  await execa("xcodebuild", ["clean", ...sharedSettings], { cwd: srcDir });
 
-  green("==> Archiving...");
+  green("Archiving...");
   await execa(
     "xcodebuild",
     [
@@ -101,7 +122,7 @@ export const build = async (srcDir: string, schemeName: string, destinationSpeci
     { stdio: "inherit", cwd: srcDir }
   );
 
-  green("==> Exporting...");
+  green("Exporting...");
 
   const exportOptionsPlist = {
     destination: "export",

@@ -21,16 +21,16 @@ export const dmg = async ({ exportedAppPath, productName, version, keychainProfi
   const outputDir = dirname(exportedAppPath);
   
   // Create and sign DMG
-  green('==> Creating and code signing DMG...');
+  green('Creating and code signing DMG...');
   await execa('create-dmg', ['--overwrite', exportedAppPath, outputDir, `--identity=${identity}`], { stdio: 'inherit' });
 
   const dmgPath = join(outputDir, `${productName} ${version}.dmg`);
 
-  green(`==> Notarizing DMG at path ${dmgPath}...`);
+  green(`Notarizing DMG...`);
   await execa('xcrun', ['notarytool', 'submit', dmgPath, `--keychain-profile=${keychainProfile}`, '--wait'], { stdio: 'inherit' });
 
   // Staple
-  green('==> Stapling DMG with notarization ticket...');
+  green('Stapling DMG with notarization ticket...');
   await execa('xcrun', ['stapler', 'staple', dmgPath], { stdio: 'inherit' });
 
   return { dmgPath };

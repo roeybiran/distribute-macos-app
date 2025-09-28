@@ -22,11 +22,11 @@ export const getSigningIdentity = async (teamId: string): Promise<string> => {
   if (!identity) {
     throw new Error('No codesign identity found. Aborting.');
   } else if (identities.length > 1) {
-    green('==> Found multiple suitable codesigning identities. Using the first:');
+    green('Found multiple suitable codesigning identities. Using the first:');
   } else {
-    green('==> Using codesigning identity:');
+    green('Using codesigning identity:');
   }
-  green(`==> ${identity}`);
+  green(identity);
 
   return identity;
 };

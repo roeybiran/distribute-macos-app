@@ -22,10 +22,10 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   if (existsSync(changelogPath)) {
     try {
       changelogToHtml(changelogPath, changelogBasename, outDir);
-      green('==> Generated release notes from changelog.yml');
+      green('Generated release notes from changelog.yml');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      red(`==> Error generating release notes: ${errorMessage}`);
+      red(`Error generating release notes: ${errorMessage}`);
     }
   } else {
     throw new Error(`No changelog.yml found (looked for ${changelogPath})`);
@@ -37,10 +37,10 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   // Copy DMG to sparkle directory
   const dmgName = basename(dmgPath);
   const targetDmgPath = join(outDir, dmgName);
-  green(`==> Copying DMG to ${targetDmgPath}...`);
+  green(`Copying DMG to ${targetDmgPath}...`);
   copyFileSync(dmgPath, targetDmgPath);
 
-  green('==> Generating Appcast.xml...');
+  green('Generating Appcast.xml...');
   
   // Use the Sparkle tool from derived data path
   const appcastTool = join(derivedDataPath, 'SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast');
@@ -59,7 +59,7 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
   
   await execa(appcastTool, args, { stdio: 'inherit' });
 
-  green('==> Deleting partial release note files...');
+  green('Deleting partial release note files...');
   const changelogFiles = globSync(`${changelogBasename} *.html`, { cwd: outDir });
   for (const file of changelogFiles) {
     unlinkSync(join(outDir, file));

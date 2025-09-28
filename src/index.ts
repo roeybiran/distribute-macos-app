@@ -8,7 +8,6 @@ import { sparkle } from "./steps/sparkle.ts";
 import { checkSparklePrivateKey } from "./util/checkSparklePrivateKey.ts";
 import { checkNotaryCredentials } from "./util/checkNotaryCredentials.ts";
 import { checkDmgDependencies } from "./util/checkDmgDependencies.ts";
-import { execa } from "execa";
 import { getSigningIdentity } from "./util/getSigningIdentity.ts";
 import { red, blue, green } from "./util/colors.ts";
 import { DERIVED_DATA_PATH } from "./constants.ts";
@@ -54,43 +53,23 @@ program
       destination: string;
     }) => {
       try {
-        // Run dependency checks at the beginning
-        const { stdout: gitStatus } = await execa("git", ["status", "-s"], {
-          cwd: srcDir,
-        });
-        if (gitStatus.trim()) {
-          throw new Error(
-            "Git working directory is dirty. Please commit or stash changes before building."
-          );
-        }
-
-        const { stdout: currentBranch } = await execa(
-          "git",
-          ["rev-parse", "--abbrev-ref", "HEAD"],
-          { cwd: srcDir }
-        );
-        if (
-          currentBranch.trim() !== "main" &&
-          currentBranch.trim() !== "master"
-        ) {
-          throw new Error(
-            `Not on default branch (current: ${currentBranch.trim()}). Please switch to main or master branch.`
-          );
-        }
-
-        blue("==> Checking create-dmg dependencies...");
+        blue("Checking create-dmg dependencies...");
         await checkDmgDependencies();
 
-        blue("==> Checking Notary credentials...");
+        blue("Checking Notary credentials...");
         await checkNotaryCredentials(keychainProfile);
 
-        blue("==> Checking code signing identity...");
+        blue("Checking code signing identity...");
         await getSigningIdentity(teamId);
 
         green("✓ Prerequisites OK");
 
-        const { exportedAppPath, productName, version } =
-          await build(srcDir, scheme, destination, teamId);
+        const { exportedAppPath, productName, version } = await build(
+          srcDir,
+          scheme,
+          destination,
+          teamId
+        );
 
         const { dmgPath } = await dmg({
           exportedAppPath,
@@ -102,7 +81,6 @@ program
 
         green("✓ DMG created:");
         green(dmgPath);
-
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -135,7 +113,7 @@ program
       appHomepage?: string;
     }) => {
       try {
-        blue("==> Checking Sparkle private key...");
+        blue("Checking Sparkle private key...");
         await checkSparklePrivateKey();
         green("✓ Prerequisites OK");
 
