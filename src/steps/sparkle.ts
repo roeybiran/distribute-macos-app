@@ -1,30 +1,45 @@
-import { execa } from 'execa';
-import { mkdirSync, copyFileSync, unlinkSync, globSync, existsSync, readFileSync, writeFileSync } from 'fs';
-import { join, basename } from 'path';
+import { execCommand } from "../util/execCommand.ts";
+import {
+  mkdirSync,
+  copyFileSync,
+  unlinkSync,
+  globSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+} from "fs";
+import { join, basename } from "path";
 import prettier from "@prettier/sync";
 import yaml from "js-yaml";
 import markdownit from "markdown-it";
-import { checkSparklePrivateKey } from '../util/checkSparklePrivateKey.ts';
-import { red, green } from '../util/colors.ts';
+import { checkSparklePrivateKey } from "../util/checkSparklePrivateKey.ts";
+import { red, green, blue } from "../util/colors.ts";
 
-export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, appHomepage, derivedDataPath }: {
-  dmgPath: string;
+export const sparkle = ({
+  dmgPath,
+  srcDir,
+  outDir,
+  fullReleaseNotesUrl,
+  appHomepage,
+}: {
   srcDir: string;
   outDir: string;
-  fullReleaseNotesUrl?: string;
-  appHomepage?: string;
-  derivedDataPath: string;
+  dmgPath?: string | undefined;
+  fullReleaseNotesUrl?: string | undefined;
+  appHomepage?: string | undefined;
 }) => {
-  await checkSparklePrivateKey()
+  blue("Checking Sparkle private key...");
+  checkSparklePrivateKey();
 
   const changelogBasename = basename(srcDir);
-  const changelogPath = join(srcDir, 'CHANGELOG.yaml');
+  const changelogPath = join(srcDir, "CHANGELOG.yaml");
+
   if (existsSync(changelogPath)) {
     try {
       changelogToHtml(changelogPath, changelogBasename, outDir);
-      green('Generated release notes from changelog.yml');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       red(`Error generating release notes: ${errorMessage}`);
     }
   } else {
@@ -33,34 +48,43 @@ export const sparkle = async ({ dmgPath, srcDir, outDir, fullReleaseNotesUrl, ap
 
   // Create sparkle directory if it doesn't exist
   mkdirSync(outDir, { recursive: true });
-  
-  // Copy DMG to sparkle directory
-  const dmgName = basename(dmgPath);
-  const targetDmgPath = join(outDir, dmgName);
-  green(`Copying DMG to ${targetDmgPath}...`);
-  copyFileSync(dmgPath, targetDmgPath);
 
-  green('Generating Appcast.xml...');
-  
-  // Use the Sparkle tool from derived data path
-  const appcastTool = join(derivedDataPath, 'SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast');
-  
-  if (!existsSync(appcastTool)) {
-    throw new Error(`Couldn't find the Sparkle generate_appcast tool at ${appcastTool}. Make sure Sparkle framework is built. Aborting`);
+  // Copy DMG to sparkle directory
+  if (dmgPath) {
+    const dmgName = basename(dmgPath);
+    const targetDmgPath = join(outDir, dmgName);
+    green(`Copying DMG to ${targetDmgPath}...`);
+    copyFileSync(dmgPath, targetDmgPath);
   }
 
-  const args = ['--auto-prune-update-files', outDir];
+  green("Generating Appcast.xml...");
+
+  // Use the Sparkle tool from derived data path
+  const appcastTool = join(
+    srcDir,
+    ".build/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast"
+  );
+
+  if (!existsSync(appcastTool)) {
+    throw new Error(
+      `Couldn't find the Sparkle generate_appcast tool at ${appcastTool}. Make sure Sparkle framework is built. Aborting`
+    );
+  }
+
+  const args = ["--auto-prune-update-files", outDir];
   if (fullReleaseNotesUrl) {
-    args.unshift('--full-release-notes-url', fullReleaseNotesUrl);
+    args.unshift("--full-release-notes-url", fullReleaseNotesUrl);
   }
   if (appHomepage) {
-    args.unshift('--link', appHomepage);
+    args.unshift("--link", appHomepage);
   }
-  
-  await execa(appcastTool, args, { stdio: 'inherit' });
 
-  green('Deleting partial release note files...');
-  const changelogFiles = globSync(`${changelogBasename} *.html`, { cwd: outDir });
+  execCommand(appcastTool, args);
+
+  green("Deleting partial release note files...");
+  const changelogFiles = globSync(`${changelogBasename} *.html`, {
+    cwd: outDir,
+  });
   for (const file of changelogFiles) {
     unlinkSync(join(outDir, file));
   }
@@ -72,7 +96,11 @@ const md = markdownit({
   typographer: true,
 });
 
-const changelogToHtml = (changelogPath: string, appName: string, outDir: string) => {
+const changelogToHtml = (
+  changelogPath: string,
+  appName: string,
+  outDir: string
+) => {
   try {
     const yamlContent = readFileSync(changelogPath, "utf-8");
     const entries = yaml.load(yamlContent);
@@ -102,7 +130,9 @@ const changelogToHtml = (changelogPath: string, appName: string, outDir: string)
         if (!Array.isArray(entry.note)) {
           throw new Error(`Note must be an array at index ${index}`);
         }
-        const notesContent = entry.note.map((note: string) => md.render(note)).join("");
+        const notesContent = entry.note
+          .map((note: string) => md.render(note))
+          .join("");
         notes = `<div class="note">${notesContent}</div>`;
       }
 
@@ -146,12 +176,13 @@ const changelogToHtml = (changelogPath: string, appName: string, outDir: string)
       .join("\n");
 
     writeFileSync(join(outDir, `${appName}.html`), formatHtml(fullChangelog));
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to convert CHANGELOG.yaml to HTML: ${errorMessage}`);
+    throw new Error(
+      `Failed to convert CHANGELOG.yaml to HTML: ${errorMessage}`
+    );
   }
-}
+};
 
 const makeSection = (entry: any, type: string): string => {
   const items = entry[type];
@@ -162,7 +193,7 @@ const makeSection = (entry: any, type: string): string => {
     change: "Changes",
     fix: "Fixes",
     issue: "Known Issues",
-  }
+  };
 
   const listItems = items.map(itemToHtml).join("");
 
@@ -174,7 +205,7 @@ const makeSection = (entry: any, type: string): string => {
       </ul>
     </div>
   `.trim();
-}
+};
 
 const itemToHtml = (item: string | object): string => {
   if (typeof item === "string") {
@@ -198,8 +229,7 @@ const itemToHtml = (item: string | object): string => {
           <ul>
             ${nestedItems}
           </ul>
-        </li>`
-        .trim();
+        </li>`.trim();
       })
       .join("\n");
   }
@@ -207,7 +237,7 @@ const itemToHtml = (item: string | object): string => {
   throw new Error(
     "List items must be strings or objects with string keys and array values"
   );
-}
+};
 
 const formatHtml = (html: string): string => {
   try {
@@ -217,15 +247,10 @@ const formatHtml = (html: string): string => {
     console.warn("Failed to format HTML:", errorMessage);
     return html; // Return original HTML if formatting fails
   }
-}
+};
 
-/**
- * Validates if a string is a valid semver version
- * @param {string} version - Version string to validate
- * @returns {boolean} Whether the version is valid
- */
 const isValidSemver = (version: string): boolean => {
   const semverRegex =
     /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
   return semverRegex.test(version);
-}
+};

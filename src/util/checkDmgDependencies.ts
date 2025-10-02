@@ -1,11 +1,10 @@
-import { execa } from 'execa';
-import { red } from './colors.ts';
+import { execCommand } from './execCommand.ts';
 
-export const checkDmgDependencies = async (): Promise<void> => {
+export const checkDmgDependencies = (): void => {
   const dependencies = ['create-dmg', 'gm', 'magick'];
   for (const dep of dependencies) {
     try {
-      await execa('command', ['-v', dep]);
+      execCommand('command', ['-v', dep]);
     } catch {
       throw new Error(`${dep} is missing`);
     }

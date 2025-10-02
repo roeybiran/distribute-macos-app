@@ -1,16 +1,10 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { join } from "path";
-import { build } from "./steps/build.ts";
+import { buildApp } from "./steps/build-app.ts";
 import { dmg } from "./steps/dmg.ts";
 import { sparkle } from "./steps/sparkle.ts";
-import { checkSparklePrivateKey } from "./util/checkSparklePrivateKey.ts";
-import { checkNotaryCredentials } from "./util/checkNotaryCredentials.ts";
-import { checkDmgDependencies } from "./util/checkDmgDependencies.ts";
-import { getSigningIdentity } from "./util/getSigningIdentity.ts";
-import { red, blue, green } from "./util/colors.ts";
-import { DERIVED_DATA_PATH } from "./constants.ts";
+import { red } from "./util/colors.ts";
 
 const program = new Command();
 
@@ -28,6 +22,10 @@ program
     "Keychain profile for notarization"
   )
   .requiredOption("--team-id <teamId>", "Apple Developer Team ID")
+  .requiredOption(
+    "--out-dir <path>",
+    "Output directory containing all releases"
+  )
   .option(
     "--src-dir <path>",
     "Source directory, must contain an .xcodeproj file",
@@ -38,6 +36,8 @@ program
     "Destination device specifier",
     "generic/platform=macOS"
   )
+  .option("--full-release-notes-url <url>", "URL for full release notes")
+  .option("--app-homepage <url>", "App homepage URL")
   .action(
     async ({
       srcDir,
@@ -45,33 +45,27 @@ program
       keychainProfile,
       teamId,
       destination,
+      outDir,
+      fullReleaseNotesUrl,
+      appHomepage,
     }: {
       srcDir: string;
       scheme: string;
       keychainProfile: string;
       teamId: string;
       destination: string;
+      outDir: string;
+      fullReleaseNotesUrl?: string;
+      appHomepage?: string;
     }) => {
       try {
-        blue("Checking create-dmg dependencies...");
-        await checkDmgDependencies();
-
-        blue("Checking Notary credentials...");
-        await checkNotaryCredentials(keychainProfile);
-
-        blue("Checking code signing identity...");
-        await getSigningIdentity(teamId);
-
-        green("✓ Prerequisites OK");
-
-        const { exportedAppPath, productName, version } = await build(
+        const { exportedAppPath, productName, version } = buildApp(
           srcDir,
           scheme,
           destination,
           teamId
         );
-
-        const { dmgPath } = await dmg({
+        const { dmgPath } = dmg({
           exportedAppPath,
           productName,
           version,
@@ -79,8 +73,13 @@ program
           teamId,
         });
 
-        green("✓ DMG created:");
-        green(dmgPath);
+        sparkle({
+          srcDir,
+          outDir,
+          dmgPath,
+          fullReleaseNotesUrl,
+          appHomepage,
+        });
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -93,38 +92,35 @@ program
 program
   .command("sparkle")
   .description("Generate Sparkle files")
-  .requiredOption("--dmg-path <path>", "Path to the DMG file")
-  .requiredOption("--out-dir <path>", "Directory for Sparkle files")
-  .option("--src-dir <path>", "Source .xcodeproj file path", process.cwd())
+  .requiredOption(
+    "--out-dir <path>",
+    "Output directory containing all releases"
+  )
+  .option("--dmg-path <path>", "Path to the new DMG file")
+  .option("--src-dir <path>", "Xcode project path", process.cwd())
   .option("--full-release-notes-url <url>", "URL for full release notes")
   .option("--app-homepage <url>", "App homepage URL")
   .action(
     async ({
+      outDir,
       dmgPath,
       srcDir,
-      outDir,
       fullReleaseNotesUrl,
       appHomepage,
     }: {
+      outDir: string;
       dmgPath: string;
       srcDir: string;
-      outDir: string;
       fullReleaseNotesUrl?: string;
       appHomepage?: string;
     }) => {
       try {
-        blue("Checking Sparkle private key...");
-        await checkSparklePrivateKey();
-        green("✓ Prerequisites OK");
-
-        const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
-        await sparkle({
+        sparkle({
           dmgPath,
           srcDir,
           outDir,
-          ...(fullReleaseNotesUrl ? { fullReleaseNotesUrl } : {}),
-          ...(appHomepage ? { appHomepage } : {}),
-          derivedDataPath,
+          fullReleaseNotesUrl,
+          appHomepage,
         });
       } catch (error) {
         const errorMessage =

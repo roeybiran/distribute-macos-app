@@ -1,8 +1,8 @@
-import { execa } from 'execa';
+import { execCommand } from './execCommand.ts';
 
-export const checkNotaryCredentials = async (profile: string): Promise<void> => {
+export const checkNotaryCredentials = (profile: string): void => {
   try {
-    await execa('xcrun', ['notarytool', 'history', '-p', profile]);
+    execCommand('xcrun', ['notarytool', 'history', '-p', profile]);
   } catch {
     throw new Error(
       `No credential profile named ${profile} found in Keychain.\n` +

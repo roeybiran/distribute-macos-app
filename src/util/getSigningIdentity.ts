@@ -1,8 +1,8 @@
-import { execa } from 'execa';
-import { red, green } from './colors.ts';
+import { execCommand } from './execCommand.ts';
+import { green } from './colors.ts';
 
-export const getSigningIdentity = async (teamId: string): Promise<string> => {
-  const { stdout } = await execa('security', ['find-identity', '-vp', 'codesigning']);
+export const getSigningIdentity = (teamId: string): string => {
+  const stdout = execCommand('security', ['find-identity', '-vp', 'codesigning']);
   
   // security find-identity -vp codesigning, example output:
   // 1) <identity-hash> "Apple Development: <team-name> (<team-id>)"
@@ -11,8 +11,8 @@ export const getSigningIdentity = async (teamId: string): Promise<string> => {
 
   const identities = stdout
     .split('\n')
-    .filter(line => line.includes('Developer ID Application') && line.includes(teamId))
-    .map(line => {
+    .filter((line) => line.includes('Developer ID Application') && line.includes(teamId))
+    .map((line) => {
       const match = line.match(/"([^"]+)"/);
       return match ? match[1] : '';
     })
@@ -22,11 +22,10 @@ export const getSigningIdentity = async (teamId: string): Promise<string> => {
   if (!identity) {
     throw new Error('No codesign identity found. Aborting.');
   } else if (identities.length > 1) {
-    green('Found multiple suitable codesigning identities. Using the first:');
+    green(`Found multiple suitable codesigning identities. Using the first: ${identity}`);
   } else {
-    green('Using codesigning identity:');
+    green(`Using codesigning identity: ${identity}`);
   }
-  green(identity);
 
   return identity;
 };

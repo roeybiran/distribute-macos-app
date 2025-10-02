@@ -1,18 +1,18 @@
 import { mkdirSync, writeFileSync, readdirSync } from "fs";
 import { join } from "path";
 import plist from "plist";
-import { execa } from "execa";
+import { execCommand } from "../util/execCommand.ts";
 import { green } from "../util/colors.ts";
 import { DERIVED_DATA_PATH } from "../constants.ts";
+import { getSigningIdentity } from "../util/getSigningIdentity.ts";
 
-export const build = async (
+export const buildApp = (
   srcDir: string,
   schemeName: string,
   destinationSpecifier: string,
   teamId: string
 ) => {
-  
-  const { stdout: gitStatus } = await execa("git", ["status", "-s"], {
+  const gitStatus = execCommand("git", ["status", "-s"], {
     cwd: srcDir,
   });
   if (gitStatus.trim()) {
@@ -21,7 +21,7 @@ export const build = async (
     );
   }
 
-  const { stdout: currentBranch } = await execa(
+  const currentBranch = execCommand(
     "git",
     ["rev-parse", "--abbrev-ref", "HEAD"],
     { cwd: srcDir }
@@ -37,16 +37,24 @@ export const build = async (
     throw new Error("Source directory must contain an .xcodeproj file");
   }
 
+  getSigningIdentity(teamId);
+
+  const _sharedSettings = [
+    "-scheme",
+    schemeName,
+    "-destination",
+    destinationSpecifier,
+    "-configuration",
+    "Release",
+  ];
+
   green("Gathering build settings...");
-  const { stdout } = await execa(
+  const stdout = execCommand(
     "xcodebuild",
     [
       "-showBuildSettings",
-      "-scheme",
-      schemeName,
-      "-configuration",
-      "Release",
       "-json",
+      ..._sharedSettings,
     ],
     { cwd: srcDir }
   );
@@ -62,9 +70,12 @@ export const build = async (
   const [
     {
       buildSettings: {
-        PRODUCT_NAME: productName,
-        MARKETING_VERSION: version,
-        CURRENT_PROJECT_VERSION: buildVersion,
+        PRODUCT_NAME,
+        MARKETING_VERSION,
+        CURRENT_PROJECT_VERSION,
+        CODE_SIGN_IDENTITY,
+        CODE_SIGN_STYLE,
+        DEVELOPMENT_TEAM,
       },
     },
   ] = json;
@@ -75,18 +86,21 @@ export const build = async (
 
   const date = new Date();
   const timestamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
-  const xcArchiveName = `${productName} ${timestamp}`;
+  const xcArchiveName = `${PRODUCT_NAME} ${timestamp}`;
   const xcArchivePath = join(archivesPath, `${xcArchiveName}.xcarchive`);
 
   const exportedArchivePath = join(exportsPath, xcArchiveName);
   const plistPath = join(exportedArchivePath, "ExportOptions.plist");
-  const exportedAppPath = join(exportedArchivePath, `${productName}.app`);
+  const exportedAppPath = join(exportedArchivePath, `${PRODUCT_NAME}.app`);
 
   green(`Team ID: ${teamId}`);
   green(`Scheme: ${schemeName}`);
-  green(`Product name: ${productName}`);
-  green(`Version: ${version}`);
-  green(`Build: ${buildVersion}`);
+  green(`Product name: ${PRODUCT_NAME}`);
+  green(`Version: ${MARKETING_VERSION}`);
+  green(`Build: ${CURRENT_PROJECT_VERSION}`);
+  green(`Code sign identity: ${CODE_SIGN_IDENTITY}`);
+  green(`Code sign style: ${CODE_SIGN_STYLE}`);
+  green(`Development team: ${DEVELOPMENT_TEAM}`);
   green(`Archive path: ${xcArchivePath}`);
   green(`Export path: ${exportedArchivePath}`);
 
@@ -94,32 +108,27 @@ export const build = async (
   mkdirSync(exportedArchivePath, { recursive: true });
 
   const sharedSettings = [
-    "-scheme",
-    schemeName,
+    ..._sharedSettings,
     "-derivedDataPath",
     derivedDataPath,
     `DEVELOPMENT_TEAM=${teamId}`,
-    "CODE_SIGNING_STYLE=Manual",
-    "CODE_SIGN_IDENTITY=Developer ID Application",
+    // "CODE_SIGNING_STYLE=Manual",
+    // "CODE_SIGN_IDENTITY=Developer ID Application",
   ];
 
   green("Cleaning...");
-  await execa("xcodebuild", ["clean", ...sharedSettings], { cwd: srcDir });
+  execCommand("xcodebuild", ["clean", ...sharedSettings], { cwd: srcDir });
 
   green("Archiving...");
-  await execa(
+  execCommand(
     "xcodebuild",
     [
       "archive",
-      "-configuration",
-      "Release",
-      "-destination",
-      destinationSpecifier,
       "-archivePath",
       xcArchivePath,
       ...sharedSettings,
     ],
-    { stdio: "inherit", cwd: srcDir }
+    { cwd: srcDir }
   );
 
   green("Exporting...");
@@ -127,13 +136,13 @@ export const build = async (
   const exportOptionsPlist = {
     destination: "export",
     method: "developer-id",
-    signingStyle: "manual",
-    signingCertificate: "Developer ID Application",
+    // signingStyle: "manual",
+    // signingCertificate: "Developer ID Application",
     team: teamId,
   };
 
   writeFileSync(plistPath, plist.build(exportOptionsPlist));
-  await execa(
+  execCommand(
     "xcodebuild",
     [
       "-exportArchive",
@@ -144,13 +153,16 @@ export const build = async (
       "-exportOptionsPlist",
       plistPath,
     ],
-    { stdio: "inherit", cwd: srcDir }
+    { cwd: srcDir }
   );
+
+  green("✓ App built:");
+  green(exportedAppPath);
 
   return {
     exportedAppPath,
-    productName,
-    version,
+    productName: PRODUCT_NAME,
+    version: MARKETING_VERSION,
     teamId,
   };
 };
