@@ -23,8 +23,6 @@
     "useUnknownInCatchVariables": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -33,11 +31,5 @@
   },
   "include": [
     "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts"
   ]
 }

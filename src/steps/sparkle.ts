@@ -1,4 +1,4 @@
-import { execCommand } from "../util/execCommand.ts";
+import { execCommand } from "../util/execCommand.js";
 import {
   mkdirSync,
   copyFileSync,
@@ -12,8 +12,8 @@ import { join, basename } from "path";
 import prettier from "@prettier/sync";
 import yaml from "js-yaml";
 import markdownit from "markdown-it";
-import { checkSparklePrivateKey } from "../util/checkSparklePrivateKey.ts";
-import { red, green, blue } from "../util/colors.ts";
+import { checkSparklePrivateKey } from "../util/checkSparklePrivateKey.js";
+import { red, green, blue } from "../util/colors.js";
 
 export const sparkle = ({
   dmgPath,

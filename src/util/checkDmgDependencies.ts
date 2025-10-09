@@ -1,4 +1,4 @@
-import { execCommand } from './execCommand.ts';
+import { execCommand } from './execCommand.js';
 
 export const checkDmgDependencies = (): void => {
   const dependencies = ['create-dmg', 'gm', 'magick'];

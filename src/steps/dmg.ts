@@ -1,9 +1,9 @@
-import { execCommand } from "../util/execCommand.ts";
+import { execCommand } from "../util/execCommand.js";
 import { join, dirname } from "path";
-import { getSigningIdentity } from "../util/getSigningIdentity.ts";
-import { checkNotaryCredentials } from "../util/checkNotaryCredentials.ts";
-import { checkDmgDependencies } from "../util/checkDmgDependencies.ts";
-import { blue, green } from "../util/colors.ts";
+import { getSigningIdentity } from "../util/getSigningIdentity.js";
+import { checkNotaryCredentials } from "../util/checkNotaryCredentials.js";
+import { checkDmgDependencies } from "../util/checkDmgDependencies.js";
+import { blue, green } from "../util/colors.js";
 
 export const dmg = ({
   exportedAppPath,

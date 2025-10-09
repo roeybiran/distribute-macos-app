@@ -1,4 +1,4 @@
-import { execCommand } from './execCommand.ts';
+import { execCommand } from './execCommand.js';
 
 export const checkNotaryCredentials = (profile: string): void => {
   try {

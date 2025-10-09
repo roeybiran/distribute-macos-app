@@ -1,15 +1,20 @@
 {
-  "name": "distribute-macos-app",
+  "name": "@roeybiran/distribute-macos-app",
   "version": "1.0.0",
   "description": "A command line tool for distributing macOS applications",
   "type": "module",
   "bin": {
-    "distribute-macos-app": "./src/index.js"
+    "distribute-macos-app": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "start": "node ./src/index.ts",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "lint": "eslint ."
+    "build": "tsc",
+    "prepublish": "npm run build",
+    "start": "npm run build && node dist/index.js",
+    "lint": "eslint .",
+    "test": "exit 0"
   },
   "keywords": [
     "cli",

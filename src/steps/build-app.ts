@@ -1,10 +1,10 @@
 import { mkdirSync, writeFileSync, readdirSync } from "fs";
 import { join } from "path";
 import plist from "plist";
-import { execCommand } from "../util/execCommand.ts";
-import { green } from "../util/colors.ts";
-import { DERIVED_DATA_PATH } from "../constants.ts";
-import { getSigningIdentity } from "../util/getSigningIdentity.ts";
+import { execCommand } from "../util/execCommand.js";
+import { green } from "../util/colors.js";
+import { DERIVED_DATA_PATH } from "../constants.js";
+import { getSigningIdentity } from "../util/getSigningIdentity.js";
 
 export const buildApp = (
   srcDir: string,

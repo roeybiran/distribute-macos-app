@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { green } from '../util/colors.ts';
+import { green } from '../util/colors.js';
 
 export const github = async ({ dmgPath, version }: { dmgPath: string; version: string }) => {
   green('Pulling + rebasing...');

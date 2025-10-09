@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { buildApp } from "./steps/build-app.ts";
-import { dmg } from "./steps/dmg.ts";
-import { sparkle } from "./steps/sparkle.ts";
-import { red } from "./util/colors.ts";
+import { buildApp } from "./steps/build-app.js";
+import { dmg } from "./steps/dmg.js";
+import { sparkle } from "./steps/sparkle.js";
+import { red } from "./util/colors.js";
 
 const program = new Command();
 

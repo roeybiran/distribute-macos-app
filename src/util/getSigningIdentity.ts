@@ -1,5 +1,5 @@
-import { execCommand } from './execCommand.ts';
-import { green } from './colors.ts';
+import { execCommand } from './execCommand.js';
+import { green } from './colors.js';
 
 export const getSigningIdentity = (teamId: string): string => {
   const stdout = execCommand('security', ['find-identity', '-vp', 'codesigning']);
