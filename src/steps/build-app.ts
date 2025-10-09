@@ -6,6 +6,8 @@ import { green } from "../util/colors.js";
 import { DERIVED_DATA_PATH } from "../constants.js";
 import { getSigningIdentity } from "../util/getSigningIdentity.js";
 
+const RELEASE_BRANCHES = ["main", "master"];
+
 export const buildApp = (
   srcDir: string,
   schemeName: string,
@@ -26,9 +28,9 @@ export const buildApp = (
     ["rev-parse", "--abbrev-ref", "HEAD"],
     { cwd: srcDir }
   );
-  if (currentBranch.trim() !== "main" && currentBranch.trim() !== "master") {
+  if (!RELEASE_BRANCHES.includes(currentBranch.trim())) {
     throw new Error(
-      `Not on default branch (current: ${currentBranch.trim()}). Please switch to main or master branch.`
+      `Not on release branch (current: ${currentBranch.trim()}). Please switch to ${RELEASE_BRANCHES.join(" or ")} branch.`
     );
   }
 
@@ -39,22 +41,42 @@ export const buildApp = (
 
   getSigningIdentity(teamId);
 
-  const _sharedSettings = [
+  const archivesPath = join(srcDir, ".build/Archives");
+  const exportsPath = join(srcDir, ".build/Exports");
+  const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
+
+  const baseSettings = [
     "-scheme",
     schemeName,
     "-destination",
     destinationSpecifier,
+  ]
+
+  const configurationSettings = [
     "-configuration",
     "Release",
+  ];
+
+  const derivedDataSettings = [
+    "-derivedDataPath",
+    derivedDataPath,
+  ];
+
+  const sharedSettings = [
+    ...baseSettings,
+    ...configurationSettings,
+    ...derivedDataSettings,
+    `DEVELOPMENT_TEAM=${teamId}`,
   ];
 
   green("Gathering build settings...");
   const stdout = execCommand(
     "xcodebuild",
     [
+      ...baseSettings,
+      ...configurationSettings,
       "-showBuildSettings",
       "-json",
-      ..._sharedSettings,
     ],
     { cwd: srcDir }
   );
@@ -80,9 +102,6 @@ export const buildApp = (
     },
   ] = json;
 
-  const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
-  const archivesPath = join(srcDir, ".build/Archives");
-  const exportsPath = join(srcDir, ".build/Exports");
 
   const date = new Date();
   const timestamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
@@ -107,17 +126,11 @@ export const buildApp = (
   mkdirSync(archivesPath, { recursive: true });
   mkdirSync(exportedArchivePath, { recursive: true });
 
-  const sharedSettings = [
-    ..._sharedSettings,
-    "-derivedDataPath",
-    derivedDataPath,
-    `DEVELOPMENT_TEAM=${teamId}`,
-    // "CODE_SIGNING_STYLE=Manual",
-    // "CODE_SIGN_IDENTITY=Developer ID Application",
-  ];
-
   green("Cleaning...");
-  execCommand("xcodebuild", ["clean", ...sharedSettings], { cwd: srcDir });
+  execCommand("xcodebuild", ["clean", ...sharedSettings,], { cwd: srcDir });
+
+  green("Testing...");
+  execCommand("xcodebuild", ["test", ...baseSettings, ...derivedDataSettings, "-quiet"], { cwd: srcDir });
 
   green("Archiving...");
   execCommand(
