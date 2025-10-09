@@ -15,6 +15,14 @@ Work in progress!
 - [Creating API Keys for App Store Connect API](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api)
 
 ## Notarization
+No credential profile named ${profile} found in Keychain.
+
+To create another credential profile, run:
+xcrun notarytool store-credentials "${profile}" --key PATH_TO_PRIVATE_KEY --key-id KEY_ID --issuer ISSUER_ID
+
+Generating the profile can be done through App Store Connect: https://appstoreconnect.apple.com/access/integrations/api
+
+Learn more: https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api#Download-and-Store-a-Team-Private-Key
 
 - [Customizing the notarization workflow — Apple Developer Documentation](https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow)
 - [Customizing the Xcode archive process — Apple Developer Documentation](https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow/customizing_the_xcode_archive_process)

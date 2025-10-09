@@ -66,14 +66,6 @@ export const buildApp = (
     derivedDataPath,
   ];
 
-  const sharedSettings = [
-    ...schemeSettings,
-    ...destinationSettings,
-    ...configurationSettings,
-    ...derivedDataSettings,
-    `DEVELOPMENT_TEAM=${teamId}`,
-  ];
-
   green("Gathering build settings...");
   const stdout = execCommand(
     "xcodebuild",
@@ -133,10 +125,10 @@ export const buildApp = (
   mkdirSync(exportedArchivePath, { recursive: true });
 
   green("Cleaning...");
-  execCommand("xcodebuild", ["clean", ...sharedSettings,], { cwd: srcDir });
+  execCommand("xcodebuild", ["clean"], { cwd: srcDir });
 
   green("Testing...");
-  execCommand("xcodebuild", ["test", ...schemeSettings, ...derivedDataSettings, "-quiet"], { cwd: srcDir });
+  execCommand("xcodebuild", ["test", ...schemeSettings, ...derivedDataSettings], { cwd: srcDir });
 
   green("Archiving...");
   execCommand(
@@ -145,7 +137,11 @@ export const buildApp = (
       "archive",
       "-archivePath",
       xcArchivePath,
-      ...sharedSettings,
+    ...schemeSettings,
+    ...destinationSettings,
+    ...configurationSettings,
+    ...derivedDataSettings,
+    `DEVELOPMENT_TEAM=${teamId}`,
     ],
     { cwd: srcDir }
   );

@@ -5,6 +5,8 @@ import { buildApp } from "./steps/build-app.js";
 import { dmg } from "./steps/dmg.js";
 import { sparkle } from "./steps/sparkle.js";
 import { red } from "./util/colors.js";
+import { checkNotaryCredentials } from "./util/checkNotaryCredentials.js";
+import { getSigningIdentity } from "./util/getSigningIdentity.js";
 
 const program = new Command();
 
@@ -58,6 +60,10 @@ program
       fullReleaseNotesUrl?: string;
       appHomepage?: string;
     }) => {
+
+      getSigningIdentity(teamId);
+      checkNotaryCredentials(keychainProfile);
+
       try {
         const { exportedAppPath, productName, version } = buildApp(
           srcDir,
