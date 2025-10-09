@@ -45,12 +45,16 @@ export const buildApp = (
   const exportsPath = join(srcDir, ".build/Exports");
   const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
 
-  const baseSettings = [
+
+  const schemeSettings = [
     "-scheme",
     schemeName,
+  ];
+
+  const destinationSettings = [
     "-destination",
     destinationSpecifier,
-  ]
+  ];
 
   const configurationSettings = [
     "-configuration",
@@ -63,7 +67,8 @@ export const buildApp = (
   ];
 
   const sharedSettings = [
-    ...baseSettings,
+    ...schemeSettings,
+    ...destinationSettings,
     ...configurationSettings,
     ...derivedDataSettings,
     `DEVELOPMENT_TEAM=${teamId}`,
@@ -73,7 +78,8 @@ export const buildApp = (
   const stdout = execCommand(
     "xcodebuild",
     [
-      ...baseSettings,
+      ...schemeSettings,
+      ...destinationSettings,
       ...configurationSettings,
       "-showBuildSettings",
       "-json",
@@ -130,7 +136,7 @@ export const buildApp = (
   execCommand("xcodebuild", ["clean", ...sharedSettings,], { cwd: srcDir });
 
   green("Testing...");
-  execCommand("xcodebuild", ["test", ...baseSettings, ...derivedDataSettings, "-quiet"], { cwd: srcDir });
+  execCommand("xcodebuild", ["test", ...schemeSettings, ...derivedDataSettings, "-quiet"], { cwd: srcDir });
 
   green("Archiving...");
   execCommand(
