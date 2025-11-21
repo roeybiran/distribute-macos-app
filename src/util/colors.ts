@@ -5,13 +5,13 @@ const ansiGreen = '\u001B[32m';
 const ansiReset = '\u001B[0m';
 
 export const red = (message: string) => {
-	console.log(`${ansiRed}==> ${message}${ansiReset}`);
+	console.log(`${ansiRed}==> ${ansiReset}${message}`);
 };
 
 export const blue = (message: string) => {
-	console.log(`${ansiBlue}==> ${message}${ansiReset}`);
+	console.log(`${ansiBlue}==> ${ansiReset}${message}`);
 };
 
 export const green = (message: string) => {
-	console.log(`${ansiGreen}==> ${message}${ansiReset}`);
+	console.log(`${ansiGreen}==> ${ansiReset}${message}`);
 };

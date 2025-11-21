@@ -1,7 +1,4 @@
-import {
-	readFileSync,
-	writeFileSync,
-} from 'node:fs';
+import {readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import prettier from '@prettier/sync';
 import yaml from 'js-yaml';
@@ -18,62 +15,61 @@ export const changelogToHtml = (
 	appName: string,
 	outDir: string,
 ) => {
-	try {
-		const yamlContent = readFileSync(changelogPath, 'utf8');
-		const entries = yaml.load(yamlContent);
+	const yamlContent = readFileSync(changelogPath, 'utf8');
+	const entries = yaml.load(yamlContent);
 
-		if (!Array.isArray(entries)) {
-			throw new TypeError('Changelog YAML must be a top-level array');
+	if (!Array.isArray(entries)) {
+		throw new TypeError('Changelog YAML must be a top-level array');
+	}
+
+	const sections = entries.map((entry, index) => {
+		// Validate required fields
+		if (!entry.version || !entry.date) {
+			throw new Error(`Entry at index ${index} must have version and date fields`);
 		}
 
-		const sections = entries.map((entry, index) => {
-			// Validate required fields
-			if (!entry.version || !entry.date) {
-				throw new Error(`Entry at index ${index} must have version and date fields`);
+		// Validate version format (semver)
+		if (!isValidSemver(entry.version)) {
+			throw new Error(`Invalid version format at index ${index}: "${entry.version}". Must follow semver format (e.g., 1.0.0 or 1.16)`);
+		}
+
+		// Handle optional notes array
+		let notes = '';
+		if (entry.note) {
+			if (!Array.isArray(entry.note)) {
+				throw new TypeError(`Note must be an array at index ${index}`);
 			}
 
-			// Validate version format (semver)
-			if (!isValidSemver(entry.version)) {
-				throw new Error(`Invalid version format at index ${index}: "${entry.version}". Must follow semver format (e.g., 1.0.0 or 1.16)`);
-			}
+			const notesContent = entry.note
+				.map((note: string) => md.render(note))
+				.join('');
+			notes = `<div class="note">${notesContent}</div>`;
+		}
 
-			// Handle optional notes array
-			let notes = '';
-			if (entry.note) {
-				if (!Array.isArray(entry.note)) {
-					throw new TypeError(`Note must be an array at index ${index}`);
-				}
+		// Create sections for each type of change
+		const newSection = makeSection(entry, 'new');
+		const changeSection = makeSection(entry, 'change');
+		const fixSection = makeSection(entry, 'fix');
+		const issueSection = makeSection(entry, 'issue');
 
-				const notesContent = entry.note
-					.map((note: string) => md.render(note))
-					.join('');
-				notes = `<div class="note">${notesContent}</div>`;
-			}
+		const content = formatHtml([notes, newSection, changeSection, fixSection, issueSection].join('\n'));
 
-			// Create sections for each type of change
-			const newSection = makeSection(entry, 'new');
-			const changeSection = makeSection(entry, 'change');
-			const fixSection = makeSection(entry, 'fix');
-			const issueSection = makeSection(entry, 'issue');
+		writeFileSync(join(outDir, `${appName} ${entry.version}.html`), content);
 
-			const content = formatHtml([notes, newSection, changeSection, fixSection, issueSection].join('\n'));
+		return {version: entry.version, date: entry.date, content};
+	});
 
-			writeFileSync(join(outDir, `${appName} ${entry.version}.html`), content);
-
-			return {version: entry.version, date: entry.date, content};
-		});
-
-		const fullChangelog = sections
-			.map(section => {
-				const dateObject = new Date(section.date);
-				const formattedDate = dateObject.toLocaleDateString('en-US', {
-					month: 'short',
-					day: 'numeric',
-					year: 'numeric',
-				});
-				// Format date for datetime attribute
-				const datetime = dateObject.toISOString().split('T')[0];
-				return `
+	const fullChangelog = sections
+		.map(section => {
+			const dateObject = new Date(section.date);
+			const formattedDate = dateObject.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric',
+			});
+			// Format date for datetime attribute
+			const datetime = dateObject.toISOString().split('T')[0];
+			return `
         <section class="changelog-section">
           <header class="changelog-section__header">
             <h2>${section.version}</h2>
@@ -84,14 +80,10 @@ export const changelogToHtml = (
           </div>
         </section>
       `.trim();
-			})
-			.join('\n');
+		})
+		.join('\n');
 
-		writeFileSync(join(outDir, `${appName}.html`), formatHtml(fullChangelog));
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error);
-		throw new Error(`Failed to convert CHANGELOG.yaml to HTML: ${errorMessage}`);
-	}
+	writeFileSync(join(outDir, `${appName}.html`), formatHtml(fullChangelog));
 };
 
 const makeSection = (entry: any, type: string): string => {
@@ -136,7 +128,9 @@ const itemToHtml = (item: string | Record<string, unknown>): string => {
 					throw new TypeError(`Value for key "${key}" must be an array`);
 				}
 
-				const nestedItems: string = value.map(item => itemToHtml(item)).join('');
+				const nestedItems: string = value
+					.map(item => itemToHtml(item))
+					.join('');
 				return `
         <li>
           ${md.renderInline(key)}:
@@ -166,4 +160,3 @@ const isValidSemver = (version: string): boolean => {
     = /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*))*))?(?:\+([\da-zA-Z-]+(?:\.[\da-zA-Z-]+)*))?$/;
 	return semverRegex.test(version);
 };
-

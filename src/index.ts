@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 
 import process from 'node:process';
+import {globSync, readFileSync} from 'node:fs';
+import {join, dirname} from 'node:path';
 import {Command} from 'commander';
-import {buildApp} from './steps/build-app.js';
+import plist from 'plist';
+import {archiveApp} from './steps/archive-app.js';
+import {exportApp} from './steps/export-app.js';
 import {dmg} from './steps/dmg.js';
 import {sparkle} from './steps/sparkle.js';
-import {red} from './util/colors.js';
-import {checkNotaryCredentials} from './util/check-notary-credentials.js';
+import {red, green} from './util/colors.js';
+import {getBuildSettings} from './util/get-build-settings.js';
+import {archivesPath, exportsPath} from './constants.js';
 
 const program = new Command();
 
@@ -17,7 +22,7 @@ program
 
 program
 	.command('release')
-	.description('Distribute a macOS application')
+	.description('Release a macOS application')
 	.requiredOption('--scheme <scheme>', 'Xcode scheme name')
 	.requiredOption(
 		'--keychain-profile <profile>',
@@ -59,35 +64,111 @@ program
 		fullReleaseNotesUrl?: string;
 		appHomepage?: string;
 	}) => {
-		// Preliminary check
-		checkNotaryCredentials(keychainProfile);
+		green('Gathering build settings...');
+		const buildSettings = getBuildSettings({
+			srcDir,
+			scheme,
+			destinationSpecifier: destination,
+		});
+
+		const {
+			PRODUCT_NAME: productName,
+			MARKETING_VERSION: marketingVersion,
+			CURRENT_PROJECT_VERSION: currentProjectVersion,
+			CODE_SIGN_IDENTITY: codeSignIdentity,
+			CODE_SIGN_STYLE: codeSignStyle,
+		} = buildSettings;
+		green(`Product name: ${productName}`);
+		green(`Version: ${marketingVersion}`);
+		green(`Build: ${currentProjectVersion}`);
+		green(`Code sign identity: ${codeSignIdentity}`);
+		green(`Code sign style: ${codeSignStyle}`);
+
+		const archivesPathLocal = join(srcDir, archivesPath);
+		let xcArchivePath: string | undefined;
+		const infoPlistPattern = join(
+			archivesPathLocal,
+			'*.xcarchive/Info.plist',
+		);
 
 		try {
-			const {exportedAppPath, productName, version} = buildApp(
-				srcDir,
-				scheme,
-				destination,
-				teamId,
-			);
-			const {dmgPath} = dmg({
-				exportedAppPath,
-				productName,
-				version,
-				keychainProfile,
-				teamId,
-			});
+			for (const infoPlistPath of globSync(infoPlistPattern)) {
+				try {
+					const parsedPlist = plist.parse(readFileSync(infoPlistPath, 'utf8')) as any;
 
-			sparkle({
-				srcDir,
-				outDir,
-				dmgPath,
-				fullReleaseNotesUrl,
-				appHomepage,
-			});
-		} catch (error) {
-			red(`${error instanceof Error ? error.message : String(error)}`);
-			process.exit(1);
-		}
+					const bundleVersion = Number(parsedPlist.ApplicationProperties.CFBundleVersion);
+					const currentProjectVersionNumber = Number(currentProjectVersion);
+
+					if (bundleVersion === currentProjectVersionNumber) {
+						const archivePath = dirname(infoPlistPath);
+						green(`Found existing archive with matching version (${currentProjectVersion}): ${archivePath}`);
+						xcArchivePath = archivePath;
+						break;
+					}
+				} catch {
+					continue;
+				}
+			}
+		} catch {}
+
+		xcArchivePath ??= archiveApp({
+			srcDir,
+			scheme,
+			platform: destination,
+			productName,
+			teamId,
+		}).xcArchivePath;
+
+		let exportedAppPath: string | undefined;
+		const exportedInfoPlistPattern = join(
+			srcDir,
+			exportsPath,
+			'*/*.app/Contents/Info.plist',
+		);
+
+		try {
+			for (const infoPlistPath of globSync(exportedInfoPlistPattern)) {
+				try {
+					const parsedPlist = plist.parse(readFileSync(infoPlistPath, 'utf8')) as any;
+
+					const bundleVersion = Number(parsedPlist.CFBundleVersion);
+					const currentProjectVersionNumber = Number(currentProjectVersion);
+
+					if (bundleVersion === currentProjectVersionNumber) {
+						// Extract app path from Info.plist path (go up two levels: Contents -> .app)
+						const appPath = dirname(dirname(infoPlistPath));
+						green(`Found existing exported app with matching version (${currentProjectVersion}): ${appPath}`);
+						exportedAppPath = appPath;
+						break;
+					}
+				} catch {
+					continue;
+				}
+			}
+		} catch {}
+
+		exportedAppPath ??= exportApp({
+			srcDir,
+			xcArchivePath,
+			productName,
+			teamId,
+		}).exportedAppPath;
+
+		const {dmgPath} = dmg({
+			exportedAppPath,
+			productName,
+			marketingVersion,
+			keychainProfile,
+			teamId,
+		});
+
+		sparkle({
+			srcDir,
+			outDir,
+			dmgPath,
+			fullReleaseNotesUrl,
+			appHomepage,
+		});
 	});
 
 program
@@ -102,9 +183,9 @@ program
 	.option('--full-release-notes-url <url>', 'URL for full release notes')
 	.option('--app-homepage <url>', 'App homepage URL')
 	.action(async ({
+		srcDir,
 		outDir,
 		dmgPath,
-		srcDir,
 		fullReleaseNotesUrl,
 		appHomepage,
 	}: {

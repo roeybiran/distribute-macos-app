@@ -3,13 +3,12 @@ import {
 	copyFileSync,
 	unlinkSync,
 	globSync,
-	existsSync,
 } from 'node:fs';
 import {join, basename} from 'node:path';
 import {execCommand} from '../util/exec-command.js';
 import {checkSparklePrivateKey} from '../util/check-sparkle-private-key.js';
 import {changelogToHtml} from '../util/changelog.js';
-import {red, green, blue} from '../util/colors.js';
+import {green, blue} from '../util/colors.js';
 
 export const sparkle = ({
 	dmgPath,
@@ -30,18 +29,7 @@ export const sparkle = ({
 	const changelogBasename = basename(srcDir);
 	const changelogPath = join(srcDir, 'CHANGELOG.yaml');
 
-	if (existsSync(changelogPath)) {
-		try {
-			changelogToHtml(changelogPath, changelogBasename, outDir);
-		} catch (error) {
-			const errorMessage
-        = error instanceof Error ? error.message : String(error);
-			red(`Error generating release notes: ${errorMessage}`);
-		}
-	} else {
-		throw new Error(`No changelog.yml found (looked for ${changelogPath})`);
-	}
-
+	changelogToHtml(changelogPath, changelogBasename, outDir);
 	// Create sparkle directory if it doesn't exist
 	mkdirSync(outDir, {recursive: true});
 
@@ -60,10 +48,6 @@ export const sparkle = ({
 		srcDir,
 		'.build/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast',
 	);
-
-	if (!existsSync(appcastTool)) {
-		throw new Error(`Couldn't find the Sparkle generate_appcast tool at ${appcastTool}. Make sure Sparkle framework is built. Aborting`);
-	}
 
 	const args = ['--auto-prune-update-files', outDir];
 	if (fullReleaseNotesUrl) {

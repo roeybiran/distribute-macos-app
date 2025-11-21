@@ -16,7 +16,6 @@
     "build": "tsc",
     "prepublish": "npm run build",
     "start": "npm run build && node dist/index.js",
-    "lint": "eslint .",
     "test": "exit 0"
   },
   "keywords": [

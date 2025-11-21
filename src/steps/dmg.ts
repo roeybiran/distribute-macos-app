@@ -1,20 +1,21 @@
 import {join, dirname} from 'node:path';
+import {execaSync} from 'execa';
 import {execCommand} from '../util/exec-command.js';
 import {getSigningIdentity} from '../util/get-signing-identity.js';
 import {checkNotaryCredentials} from '../util/check-notary-credentials.js';
 import {checkDmgDependencies} from '../util/check-dmg-dependencies.js';
-import {blue, green} from '../util/colors.js';
+import {green} from '../util/colors.js';
 
 export const dmg = ({
 	exportedAppPath,
 	productName,
-	version,
+	marketingVersion,
 	keychainProfile,
 	teamId,
 }: {
 	exportedAppPath: string;
 	productName: string;
-	version: string;
+	marketingVersion: string;
 	keychainProfile: string;
 	teamId: string;
 }) => {
@@ -26,28 +27,42 @@ export const dmg = ({
 	const outputDir = dirname(exportedAppPath);
 
 	green('Creating and code signing DMG...');
-	execCommand(
-		'create-dmg',
-		['--overwrite', exportedAppPath, outputDir, `--identity=${identity}`],
-	);
+	try {
+		execaSync('create-dmg', [
+			exportedAppPath,
+			outputDir,
+			`--identity=${identity}`,
+		]);
+	} catch (error) {
+		if (
+			!(error instanceof Error)
+			|| !error.message.includes('already exists')
+		) {
+			throw error;
+		}
+	}
 
-	const dmgPath = join(outputDir, `${productName} ${version}.dmg`);
+	const dmgPath = join(outputDir, `${productName} ${marketingVersion}.dmg`);
 
 	green('Notarizing DMG...');
-	execCommand(
-		'xcrun',
-		[
+	const staplerValidation = execaSync('/usr/bin/stapler', [
+		'validate',
+		'-q',
+		dmgPath,
+	]);
+
+	if (staplerValidation.exitCode !== 0) {
+		execCommand('xcrun', [
 			'notarytool',
 			'submit',
 			dmgPath,
 			`--keychain-profile=${keychainProfile}`,
 			'--wait',
-		],
-	);
-
-	// Staple
-	green('Stapling DMG with notarization ticket...');
-	execCommand('xcrun', ['stapler', 'staple', dmgPath]);
+		]);
+		// Staple
+		green('Stapling DMG with notarization ticket...');
+		execCommand('xcrun', ['stapler', 'staple', dmgPath]);
+	}
 
 	green('✓ DMG created:');
 	green(dmgPath);
