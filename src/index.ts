@@ -17,7 +17,7 @@ program
 
 program
 	.command('release')
-	.description('Distribute a macOS application')
+	.description('Release a macOS application')
 	.requiredOption('--scheme <scheme>', 'Xcode scheme name')
 	.requiredOption(
 		'--keychain-profile <profile>',
