@@ -16,6 +16,10 @@ Work in progress!
 
 ## Notarization
 
+To create a new credential profile, run:
+`xcrun notarytool store-credentials "${profile}" --key PATH_TO_PRIVATE_KEY --key-id KEY_ID --issuer ISSUER_ID`
+Generating the profile can be done through [App Store Connect](https://appstoreconnect.apple.com/access/integrations/api). [Learn more](https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api#Download-and-Store-a-Team-Private-Key).
+
 - [Customizing the notarization workflow — Apple Developer Documentation](https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow)
 - [Customizing the Xcode archive process — Apple Developer Documentation](https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow/customizing_the_xcode_archive_process)
 - [Notarize a Command Line Tool with notarytool — Scripting OS X](https://scriptingosx.com/2021/07/notarize-a-command-line-tool-with-notarytool/)

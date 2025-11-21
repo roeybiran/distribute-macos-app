@@ -1,9 +1,17 @@
 // ANSI escape codes for terminal colors
-const RED = '\x1b[31m';
-const BLUE = '\x1b[34m';
-const GREEN = '\x1b[32m';
-const RESET = '\x1b[0m';
+const ansiRed = '\u001B[31m';
+const ansiBlue = '\u001B[34m';
+const ansiGreen = '\u001B[32m';
+const ansiReset = '\u001B[0m';
 
-export const red = (message: string) => console.log(`${RED}==> ${message}${RESET}`);
-export const blue = (message: string) => console.log(`${BLUE}==> ${message}${RESET}`);
-export const green = (message: string) => console.log(`${GREEN}==> ${message}${RESET}`);
+export const red = (message: string) => {
+	console.log(`${ansiRed}==> ${message}${ansiReset}`);
+};
+
+export const blue = (message: string) => {
+	console.log(`${ansiBlue}==> ${message}${ansiReset}`);
+};
+
+export const green = (message: string) => {
+	console.log(`${ansiGreen}==> ${message}${ansiReset}`);
+};

@@ -1,168 +1,177 @@
-import { mkdirSync, writeFileSync, readdirSync } from "fs";
-import { join } from "path";
-import plist from "plist";
-import { execCommand } from "../util/execCommand.js";
-import { green } from "../util/colors.js";
-import { DERIVED_DATA_PATH } from "../constants.js";
-import { getSigningIdentity } from "../util/getSigningIdentity.js";
+import {mkdirSync, writeFileSync, readdirSync} from 'node:fs';
+import {join} from 'node:path';
+import plist from 'plist';
+import {execCommand} from '../util/exec-command.js';
+import {green} from '../util/colors.js';
+import {derivedDataPath} from '../constants.js';
+import {getSigningIdentity} from '../util/get-signing-identity.js';
+
+const releaseBranches = ['main', 'master'];
 
 export const buildApp = (
-  srcDir: string,
-  schemeName: string,
-  destinationSpecifier: string,
-  teamId: string
+	srcDir: string,
+	schemeName: string,
+	destinationSpecifier: string,
+	teamId: string,
 ) => {
-  const gitStatus = execCommand("git", ["status", "-s"], {
-    cwd: srcDir,
-  });
-  if (gitStatus.trim()) {
-    throw new Error(
-      "Git working directory is dirty. Please commit or stash changes before building."
-    );
-  }
+	const gitStatus = execCommand('git', ['status', '-s'], {
+		cwd: srcDir,
+	});
+	if (gitStatus.trim()) {
+		throw new Error('Git working directory is dirty. Please commit or stash changes before building.');
+	}
 
-  const currentBranch = execCommand(
-    "git",
-    ["rev-parse", "--abbrev-ref", "HEAD"],
-    { cwd: srcDir }
-  );
-  if (currentBranch.trim() !== "main" && currentBranch.trim() !== "master") {
-    throw new Error(
-      `Not on default branch (current: ${currentBranch.trim()}). Please switch to main or master branch.`
-    );
-  }
+	const currentBranch = execCommand(
+		'git',
+		['rev-parse', '--abbrev-ref', 'HEAD'],
+		{cwd: srcDir},
+	);
+	if (!releaseBranches.includes(currentBranch.trim())) {
+		throw new Error(`Not on release branch (current: ${currentBranch.trim()}). Please switch to ${releaseBranches.join(' or ')} branch.`);
+	}
 
-  const files = readdirSync(srcDir);
-  if (!files.some((file) => file.endsWith(".xcodeproj"))) {
-    throw new Error("Source directory must contain an .xcodeproj file");
-  }
+	const files = readdirSync(srcDir);
+	if (!files.some(file => file.endsWith('.xcodeproj'))) {
+		throw new Error('Source directory must contain an .xcodeproj file');
+	}
 
-  getSigningIdentity(teamId);
+	getSigningIdentity(teamId);
 
-  const _sharedSettings = [
-    "-scheme",
-    schemeName,
-    "-destination",
-    destinationSpecifier,
-    "-configuration",
-    "Release",
-  ];
+	const archivesPath = join(srcDir, '.build/Archives');
+	const exportsPath = join(srcDir, '.build/Exports');
+	const derivedDataPathLocal = join(srcDir, derivedDataPath);
 
-  green("Gathering build settings...");
-  const stdout = execCommand(
-    "xcodebuild",
-    [
-      "-showBuildSettings",
-      "-json",
-      ..._sharedSettings,
-    ],
-    { cwd: srcDir }
-  );
+	const schemeSettings = [
+		'-scheme',
+		schemeName,
+	];
 
-  let json: any;
-  try {
-    json = JSON.parse(stdout);
-  } catch (error) {
-    console.log(stdout);
-    throw error;
-  }
+	const destinationSettings = [
+		'-destination',
+		destinationSpecifier,
+	];
 
-  const [
-    {
-      buildSettings: {
-        PRODUCT_NAME,
-        MARKETING_VERSION,
-        CURRENT_PROJECT_VERSION,
-        CODE_SIGN_IDENTITY,
-        CODE_SIGN_STYLE,
-        DEVELOPMENT_TEAM,
-      },
-    },
-  ] = json;
+	const configurationSettings = [
+		'-configuration',
+		'Release',
+	];
 
-  const derivedDataPath = join(srcDir, DERIVED_DATA_PATH);
-  const archivesPath = join(srcDir, ".build/Archives");
-  const exportsPath = join(srcDir, ".build/Exports");
+	const derivedDataSettings = [
+		'-derivedDataPath',
+		derivedDataPathLocal,
+	];
 
-  const date = new Date();
-  const timestamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
-  const xcArchiveName = `${PRODUCT_NAME} ${timestamp}`;
-  const xcArchivePath = join(archivesPath, `${xcArchiveName}.xcarchive`);
+	green('Gathering build settings...');
+	const stdout = execCommand(
+		'xcodebuild',
+		[
+			...schemeSettings,
+			...destinationSettings,
+			...configurationSettings,
+			'-showBuildSettings',
+			'-json',
+		],
+		{cwd: srcDir},
+	);
 
-  const exportedArchivePath = join(exportsPath, xcArchiveName);
-  const plistPath = join(exportedArchivePath, "ExportOptions.plist");
-  const exportedAppPath = join(exportedArchivePath, `${PRODUCT_NAME}.app`);
+	let json: any;
+	try {
+		json = JSON.parse(stdout);
+	} catch (error) {
+		console.log(stdout);
+		throw error;
+	}
 
-  green(`Team ID: ${teamId}`);
-  green(`Scheme: ${schemeName}`);
-  green(`Product name: ${PRODUCT_NAME}`);
-  green(`Version: ${MARKETING_VERSION}`);
-  green(`Build: ${CURRENT_PROJECT_VERSION}`);
-  green(`Code sign identity: ${CODE_SIGN_IDENTITY}`);
-  green(`Code sign style: ${CODE_SIGN_STYLE}`);
-  green(`Development team: ${DEVELOPMENT_TEAM}`);
-  green(`Archive path: ${xcArchivePath}`);
-  green(`Export path: ${exportedArchivePath}`);
+	const [
+		{
+			buildSettings: {
+				PRODUCT_NAME: productName,
+				MARKETING_VERSION: marketingVersion,
+				CURRENT_PROJECT_VERSION: currentProjectVersion,
+				CODE_SIGN_IDENTITY: codeSignIdentity,
+				CODE_SIGN_STYLE: codeSignStyle,
+				DEVELOPMENT_TEAM: developmentTeam,
+			},
+		},
+	] = json;
 
-  mkdirSync(archivesPath, { recursive: true });
-  mkdirSync(exportedArchivePath, { recursive: true });
+	const date = new Date();
+	const timestamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
+	const xcArchiveName = `${productName} ${timestamp}`;
+	const xcArchivePath = join(archivesPath, `${xcArchiveName}.xcarchive`);
 
-  const sharedSettings = [
-    ..._sharedSettings,
-    "-derivedDataPath",
-    derivedDataPath,
-    `DEVELOPMENT_TEAM=${teamId}`,
-    // "CODE_SIGNING_STYLE=Manual",
-    // "CODE_SIGN_IDENTITY=Developer ID Application",
-  ];
+	const exportedArchivePath = join(exportsPath, xcArchiveName);
+	const plistPath = join(exportedArchivePath, 'ExportOptions.plist');
+	const exportedAppPath = join(exportedArchivePath, `${productName}.app`);
 
-  green("Cleaning...");
-  execCommand("xcodebuild", ["clean", ...sharedSettings], { cwd: srcDir });
+	green(`Team ID: ${teamId}`);
+	green(`Scheme: ${schemeName}`);
+	green(`Product name: ${productName}`);
+	green(`Version: ${marketingVersion}`);
+	green(`Build: ${currentProjectVersion}`);
+	green(`Code sign identity: ${codeSignIdentity}`);
+	green(`Code sign style: ${codeSignStyle}`);
+	green(`Development team: ${developmentTeam}`);
+	green(`Archive path: ${xcArchivePath}`);
+	green(`Export path: ${exportedArchivePath}`);
 
-  green("Archiving...");
-  execCommand(
-    "xcodebuild",
-    [
-      "archive",
-      "-archivePath",
-      xcArchivePath,
-      ...sharedSettings,
-    ],
-    { cwd: srcDir }
-  );
+	mkdirSync(archivesPath, {recursive: true});
+	mkdirSync(exportedArchivePath, {recursive: true});
 
-  green("Exporting...");
+	green('Cleaning...');
+	execCommand('xcodebuild', ['clean'], {cwd: srcDir});
 
-  const exportOptionsPlist = {
-    destination: "export",
-    method: "developer-id",
-    // signingStyle: "manual",
-    // signingCertificate: "Developer ID Application",
-    team: teamId,
-  };
+	green('Testing...');
+	execCommand('xcodebuild', ['test', ...schemeSettings, ...derivedDataSettings], {cwd: srcDir});
 
-  writeFileSync(plistPath, plist.build(exportOptionsPlist));
-  execCommand(
-    "xcodebuild",
-    [
-      "-exportArchive",
-      "-archivePath",
-      xcArchivePath,
-      "-exportPath",
-      exportedArchivePath,
-      "-exportOptionsPlist",
-      plistPath,
-    ],
-    { cwd: srcDir }
-  );
+	green('Archiving...');
+	execCommand(
+		'xcodebuild',
+		[
+			'archive',
+			'-archivePath',
+			xcArchivePath,
+			...schemeSettings,
+			...destinationSettings,
+			...configurationSettings,
+			...derivedDataSettings,
+			`DEVELOPMENT_TEAM=${teamId}`,
+		],
+		{cwd: srcDir},
+	);
 
-  green("✓ App built:");
-  green(exportedAppPath);
+	green('Exporting...');
 
-  return {
-    exportedAppPath,
-    productName: PRODUCT_NAME,
-    version: MARKETING_VERSION,
-    teamId,
-  };
+	const exportOptionsPlist = {
+		destination: 'export',
+		method: 'developer-id',
+		// SigningStyle: "manual",
+		// signingCertificate: "Developer ID Application",
+		team: teamId,
+	};
+
+	writeFileSync(plistPath, plist.build(exportOptionsPlist));
+	execCommand(
+		'xcodebuild',
+		[
+			'-exportArchive',
+			'-archivePath',
+			xcArchivePath,
+			'-exportPath',
+			exportedArchivePath,
+			'-exportOptionsPlist',
+			plistPath,
+		],
+		{cwd: srcDir},
+	);
+
+	green('✓ App built:');
+	green(exportedAppPath);
+
+	return {
+		exportedAppPath,
+		productName,
+		version: marketingVersion,
+		teamId,
+	};
 };
