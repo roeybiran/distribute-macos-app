@@ -59,7 +59,7 @@ export const archiveApp = ({
 
 	const sharedArgs = ['-scheme', scheme, '-derivedDataPath', derivedDataPathLocal];
 	green('Testing...');
-	execCommand('xcodebuild', ['test', ...sharedArgs], {cwd: srcDir});
+	execCommand('xcodebuild', ['test', '-quiet', ...sharedArgs], {cwd: srcDir});
 
 	green(`Archiving to: ${xcArchivePath}`);
 	execCommand(
