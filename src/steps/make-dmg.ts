@@ -1,12 +1,11 @@
 import {join, dirname} from 'node:path';
-import {execaSync} from 'execa';
-import {execCommand} from '../util/exec-command.js';
+import {execa, execaSync} from 'execa';
 import {getSigningIdentity} from '../util/get-signing-identity.js';
 import {checkNotaryCredentials} from '../util/check-notary-credentials.js';
 import {checkDmgDependencies} from '../util/check-dmg-dependencies.js';
 import {green} from '../util/colors.js';
 
-export const dmg = ({
+export const dmg = async ({
 	exportedAppPath,
 	productName,
 	marketingVersion,
@@ -19,10 +18,10 @@ export const dmg = ({
 	keychainProfile: string;
 	developmentTeam: string;
 }) => {
-	checkDmgDependencies();
-	checkNotaryCredentials(keychainProfile);
+	await checkDmgDependencies();
+	await checkNotaryCredentials(keychainProfile);
 
-	const identity = getSigningIdentity(developmentTeam);
+	const identity = await getSigningIdentity(developmentTeam);
 
 	const outputDir = dirname(exportedAppPath);
 
@@ -48,16 +47,10 @@ export const dmg = ({
 	try {
 		execaSync('/usr/bin/stapler', ['validate', '-q', dmgPath]);
 	} catch {
-		execCommand('xcrun', [
-			'notarytool',
-			'submit',
-			dmgPath,
-			`--keychain-profile=${keychainProfile}`,
-			'--wait',
-		]);
+		await execa`xcrun notarytool submit ${dmgPath} --keychain-profile=${keychainProfile} --wait`;
 		// Staple
 		green('Stapling DMG with notarization ticket...');
-		execCommand('xcrun', ['stapler', 'staple', dmgPath]);
+		await execa`xcrun stapler staple ${dmgPath}`;
 	}
 
 	green('✓ DMG created:');

@@ -7,7 +7,7 @@ import {Command} from 'commander';
 import plist from 'plist';
 import {archiveApp} from './steps/archive-app.js';
 import {exportApp} from './steps/export-app.js';
-import {dmg} from './steps/dmg.js';
+import {dmg} from './steps/make-dmg.js';
 import {sparkle} from './steps/sparkle.js';
 import {red, green} from './util/colors.js';
 import {getBuildSettings} from './util/get-build-settings.js';
@@ -63,7 +63,7 @@ program
 			appHomepage?: string;
 		}) => {
 			green('Gathering build settings...');
-			const buildSettings = getBuildSettings({
+			const buildSettings = await getBuildSettings({
 				srcDir,
 				scheme,
 				destinationSpecifier: destination,
@@ -116,13 +116,14 @@ program
 				}
 			} catch {}
 
-			xcArchivePath ??= archiveApp({
-				srcDir,
-				scheme,
-				platform: destination,
-				productName,
-				developmentTeam,
-			}).xcArchivePath;
+			xcArchivePath ??= (
+				await archiveApp({
+					srcDir,
+					scheme,
+					platform: destination,
+					productName,
+				})
+			).xcArchivePath;
 
 			let exportedAppPath: string | undefined;
 			const exportedInfoPlistPattern = join(
@@ -156,14 +157,16 @@ program
 				}
 			} catch {}
 
-			exportedAppPath ??= exportApp({
-				srcDir,
-				xcArchivePath,
-				productName,
-				developmentTeam,
-			}).exportedAppPath;
+			exportedAppPath ??= (
+				await exportApp({
+					srcDir,
+					xcArchivePath,
+					productName,
+					developmentTeam,
+				})
+			).exportedAppPath;
 
-			const {dmgPath} = dmg({
+			const {dmgPath} = await dmg({
 				exportedAppPath,
 				productName,
 				marketingVersion,
@@ -171,7 +174,7 @@ program
 				developmentTeam,
 			});
 
-			sparkle({
+			await sparkle({
 				srcDir,
 				outDir,
 				scheme,
@@ -213,7 +216,7 @@ program
 			appHomepage?: string;
 		}) => {
 			try {
-				sparkle({
+				await sparkle({
 					dmgPath,
 					srcDir,
 					outDir,

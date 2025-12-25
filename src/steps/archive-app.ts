@@ -1,38 +1,30 @@
 import {mkdirSync, readdirSync} from 'node:fs';
 import {join} from 'node:path';
-import {execCommand} from '../util/exec-command.js';
+import {execa} from 'execa';
 import {green} from '../util/colors.js';
 import {archivesPath, buildConfiguration} from '../constants.js';
 
 const releaseBranches = ['main', 'master'];
 
-export const archiveApp = ({
+export const archiveApp = async ({
 	srcDir,
 	scheme,
 	platform,
 	productName,
-	developmentTeam,
 }: {
 	srcDir: string;
 	scheme: string;
 	platform: string;
 	productName: string;
-	developmentTeam: string;
-}): {xcArchivePath: string} => {
-	const gitStatus = execCommand('git', ['status', '-s'], {
-		cwd: srcDir,
-	});
+}): Promise<{xcArchivePath: string}> => {
+	const {stdout: gitStatus} = await execa({cwd: srcDir})`git status -s`;
 	if (gitStatus.trim()) {
 		throw new Error(
 			'Git working directory is dirty. Please commit or stash changes before building.',
 		);
 	}
 
-	const currentBranch = execCommand(
-		'git',
-		['rev-parse', '--abbrev-ref', 'HEAD'],
-		{cwd: srcDir},
-	);
+	const {stdout: currentBranch} = await execa({cwd: srcDir})`git rev-parse --abbrev-ref HEAD`;
 	if (!releaseBranches.includes(currentBranch.trim())) {
 		throw new Error(
 			`Not on release branch (current: ${currentBranch.trim()}). Please switch to ${releaseBranches.join(' or ')} branch.`,
@@ -54,49 +46,15 @@ export const archiveApp = ({
 	mkdirSync(archivesPathLocal, {recursive: true});
 
 	green('Cleaning...');
-	execCommand('xcodebuild', ['clean'], {cwd: srcDir});
+	await execa({cwd: srcDir})`xcodebuild clean`;
 
-	const sharedArgs = ['-scheme', scheme];
 	green('Testing...');
-	execCommand(
-		'xcodebuild',
-		[
-			'build-for-testing',
-			'-quiet',
-			'-destination',
-			'platform=macOS,arch=arm64',
-			...sharedArgs,
-		],
-		{cwd: srcDir},
-	);
-	execCommand(
-		'xcodebuild',
-		[
-			'test',
-			'-quiet',
-			'-destination',
-			'platform=macOS,arch=arm64',
-			...sharedArgs,
-		],
-		{cwd: srcDir},
-	);
+	const sharedArgs = `-scheme ${scheme} -destination ${platform} -quiet`;
+	await execa({cwd: srcDir})`xcodebuild build-for-testing ${sharedArgs}`;
+	await execa({cwd: srcDir})`xcodebuild test ${sharedArgs}`;
 
 	green(`Archiving to: ${xcArchivePath}`);
-	execCommand(
-		'xcodebuild',
-		[
-			...sharedArgs,
-			'archive',
-			'-archivePath',
-			xcArchivePath,
-			'-configuration',
-			buildConfiguration,
-			'-destination',
-			platform,
-			`DEVELOPMENT_TEAM=${developmentTeam}`,
-		],
-		{cwd: srcDir},
-	);
+	await execa({cwd: srcDir})`xcodebuild archive ${sharedArgs} -configuration ${buildConfiguration} -archivePath ${xcArchivePath}`;
 
 	return {
 		xcArchivePath,

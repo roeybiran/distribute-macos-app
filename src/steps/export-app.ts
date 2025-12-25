@@ -1,11 +1,11 @@
 import {writeFileSync, mkdirSync} from 'node:fs';
 import {join, basename} from 'node:path';
 import plist from 'plist';
-import {execCommand} from '../util/exec-command.js';
+import {execa} from 'execa';
 import {green} from '../util/colors.js';
 import {exportsPath} from '../constants.js';
 
-export const exportApp = ({
+export const exportApp = async ({
 	srcDir,
 	xcArchivePath,
 	productName,
@@ -15,7 +15,7 @@ export const exportApp = ({
 	xcArchivePath: string;
 	productName: string;
 	developmentTeam: string;
-}): {exportedAppPath: string} => {
+}): Promise<{exportedAppPath: string}> => {
 	const xcArchiveName = basename(xcArchivePath, '.xcarchive');
 	const exportsPathLocal = join(srcDir, exportsPath);
 	const exportedArchivePathLocal = join(exportsPathLocal, xcArchiveName);
@@ -30,25 +30,11 @@ export const exportApp = ({
 	const exportOptionsPlist = {
 		destination: 'export',
 		method: 'developer-id',
-		// SigningStyle: "manual",
-		// signingCertificate: "Developer ID Application",
 		team: developmentTeam,
 	};
 
 	writeFileSync(plistPath, plist.build(exportOptionsPlist));
-	execCommand(
-		'xcodebuild',
-		[
-			'-exportArchive',
-			'-archivePath',
-			xcArchivePath,
-			'-exportPath',
-			exportedArchivePathLocal,
-			'-exportOptionsPlist',
-			plistPath,
-		],
-		{cwd: srcDir},
-	);
+	await execa({cwd: srcDir})`xcodebuild -exportArchive -archivePath ${xcArchivePath} -exportPath ${exportedArchivePathLocal} -exportOptionsPlist ${plistPath}`;
 
 	green(`✓ App exported: ${exportedAppPath}`);
 

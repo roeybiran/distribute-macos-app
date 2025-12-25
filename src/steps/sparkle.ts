@@ -1,12 +1,12 @@
 import {mkdirSync, copyFileSync, unlinkSync, globSync} from 'node:fs';
 import {join, basename, dirname} from 'node:path';
-import {execCommand} from '../util/exec-command.js';
+import {execa} from 'execa';
 import {checkSparklePrivateKey} from '../util/check-sparkle-private-key.js';
-import {changelogToHtml} from '../util/changelog.js';
+import {changelogToHtml} from '../util/make-changelog.js';
 import {green, blue} from '../util/colors.js';
 import {getBuildSettings} from '../util/get-build-settings.js';
 
-export const sparkle = ({
+export const sparkle = async ({
 	dmgPath,
 	srcDir,
 	outDir,
@@ -22,7 +22,7 @@ export const sparkle = ({
 	appHomepage?: string | undefined;
 }) => {
 	blue('Checking Sparkle private key...');
-	checkSparklePrivateKey();
+	await checkSparklePrivateKey();
 
 	const changelogBasename = basename(srcDir);
 	const changelogPath = join(srcDir, 'CHANGELOG.yaml');
@@ -41,26 +41,28 @@ export const sparkle = ({
 
 	green('Generating Appcast.xml...');
 
-	const buildDir = getBuildSettings({
-		srcDir,
-		scheme,
-	}).BUILD_DIR;
+	const buildDir = (
+		await getBuildSettings({
+			srcDir,
+			scheme,
+		})
+	).BUILD_DIR;
 
 	const appcastTool = join(
 		dirname(dirname(buildDir)),
 		'SourcePackages/artifacts/sparkle/Sparkle/bin/generate_appcast',
 	);
 
-	const args = ['--auto-prune-update-files', outDir];
+	const args: string[] = [];
 	if (fullReleaseNotesUrl) {
-		args.unshift('--full-release-notes-url', fullReleaseNotesUrl);
+		args.push('--full-release-notes-url', fullReleaseNotesUrl);
 	}
-
 	if (appHomepage) {
-		args.unshift('--link', appHomepage);
+		args.push('--link', appHomepage);
 	}
+	args.push('--auto-prune-update-files', outDir);
 
-	execCommand(appcastTool, args);
+	await execa(appcastTool, args);
 
 	green('Deleting partial release note files...');
 	const changelogFiles = globSync(`${changelogBasename} *.html`, {

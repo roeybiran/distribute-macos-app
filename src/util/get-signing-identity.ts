@@ -1,12 +1,8 @@
-import {execCommand} from './exec-command.js';
+import {execa} from 'execa';
 import {green} from './colors.js';
 
-export const getSigningIdentity = (teamId: string): string => {
-	const stdout = execCommand('security', [
-		'find-identity',
-		'-vp',
-		'codesigning',
-	]);
+export const getSigningIdentity = async (teamId: string): Promise<string> => {
+	const {stdout} = await execa`security find-identity -vp codesigning`;
 
 	// Security find-identity -vp codesigning, example output:
 	// 1) <identity-hash> "Apple Development: <team-name> (<team-id>)"

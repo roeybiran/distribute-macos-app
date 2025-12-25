@@ -1,7 +1,7 @@
+import {execa} from 'execa';
 import {buildConfiguration} from '../constants.js';
-import {execCommand} from './exec-command.js';
 
-export const getBuildSettings = ({
+export const getBuildSettings = async ({
 	srcDir,
 	scheme,
 	destinationSpecifier = 'generic/platform=macOS',
@@ -10,18 +10,7 @@ export const getBuildSettings = ({
 	scheme: string;
 	destinationSpecifier?: string;
 }) => {
-	const args = [
-		'-scheme',
-		scheme,
-		'-destination',
-		destinationSpecifier,
-		'-configuration',
-		buildConfiguration,
-		'-showBuildSettings',
-		'-json',
-	];
-
-	const stdout = execCommand('xcodebuild', args, {cwd: srcDir});
+	const {stdout} = await execa({cwd: srcDir})`xcodebuild -scheme ${scheme} -destination ${destinationSpecifier} -configuration ${buildConfiguration} -showBuildSettings -json`;
 
 	let json: any;
 	try {

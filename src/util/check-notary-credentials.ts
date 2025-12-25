@@ -1,8 +1,8 @@
+import {execa} from 'execa';
 import {blue, green} from './colors.js';
-import {execCommand} from './exec-command.js';
 
-export const checkNotaryCredentials = (profile: string): void => {
+export const checkNotaryCredentials = async (profile: string): Promise<void> => {
 	blue('Checking Notary credentials...');
-	execCommand('xcrun', ['notarytool', 'history', '-p', profile]);
+	await execa`xcrun notarytool history -p ${profile}`;
 	green(`Notary credentials OK, profile: ${profile}`);
 };
