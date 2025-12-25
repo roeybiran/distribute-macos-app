@@ -1,6 +1,6 @@
 {
   "name": "@roeybiran/distribute-macos-app",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A command line tool for distributing macOS applications",
   "type": "module",
   "bin": {
