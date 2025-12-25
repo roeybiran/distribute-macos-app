@@ -44,131 +44,145 @@ program
 	)
 	.option('--full-release-notes-url <url>', 'URL for full release notes')
 	.option('--app-homepage <url>', 'App homepage URL')
-	.action(async ({
-		srcDir,
-		scheme,
-		keychainProfile,
-		destination,
-		outDir,
-		fullReleaseNotesUrl,
-		appHomepage,
-	}: {
-		srcDir: string;
-		scheme: string;
-		keychainProfile: string;
-		destination: string;
-		outDir: string;
-		fullReleaseNotesUrl?: string;
-		appHomepage?: string;
-	}) => {
-		green('Gathering build settings...');
-		const buildSettings = getBuildSettings({
+	.action(
+		async ({
 			srcDir,
 			scheme,
-			destinationSpecifier: destination,
-		});
-
-		const {
-			PRODUCT_NAME: productName,
-			MARKETING_VERSION: marketingVersion,
-			CURRENT_PROJECT_VERSION: currentProjectVersion,
-			CODE_SIGN_IDENTITY: codeSignIdentity,
-			CODE_SIGN_STYLE: codeSignStyle,
-			DEVELOPMENT_TEAM: developmentTeam,
-		} = buildSettings;
-		green(`Product name: ${productName}`);
-		green(`Version: ${marketingVersion}`);
-		green(`Build: ${currentProjectVersion}`);
-		green(`Code sign identity: ${codeSignIdentity}`);
-		green(`Code sign style: ${codeSignStyle}`);
-
-		const archivesPathLocal = join(srcDir, archivesPath);
-		let xcArchivePath: string | undefined;
-		const infoPlistPattern = join(
-			archivesPathLocal,
-			'*.xcarchive/Info.plist',
-		);
-
-		try {
-			for (const infoPlistPath of globSync(infoPlistPattern)) {
-				try {
-					const parsedPlist = plist.parse(readFileSync(infoPlistPath, 'utf8')) as any;
-
-					const bundleVersion = Number(parsedPlist.ApplicationProperties.CFBundleVersion);
-					const currentProjectVersionNumber = Number(currentProjectVersion);
-
-					if (bundleVersion === currentProjectVersionNumber) {
-						const archivePath = dirname(infoPlistPath);
-						green(`Found existing archive with matching version (${currentProjectVersion}): ${archivePath}`);
-						xcArchivePath = archivePath;
-						break;
-					}
-				} catch {
-					continue;
-				}
-			}
-		} catch {}
-
-		xcArchivePath ??= archiveApp({
-			srcDir,
-			scheme,
-			platform: destination,
-			productName,
-			developmentTeam,
-		}).xcArchivePath;
-
-		let exportedAppPath: string | undefined;
-		const exportedInfoPlistPattern = join(
-			srcDir,
-			exportsPath,
-			'*/*.app/Contents/Info.plist',
-		);
-
-		try {
-			for (const infoPlistPath of globSync(exportedInfoPlistPattern)) {
-				try {
-					const parsedPlist = plist.parse(readFileSync(infoPlistPath, 'utf8')) as any;
-
-					const bundleVersion = Number(parsedPlist.CFBundleVersion);
-					const currentProjectVersionNumber = Number(currentProjectVersion);
-
-					if (bundleVersion === currentProjectVersionNumber) {
-						// Extract app path from Info.plist path (go up two levels: Contents -> .app)
-						const appPath = dirname(dirname(infoPlistPath));
-						green(`Found existing exported app with matching version (${currentProjectVersion}): ${appPath}`);
-						exportedAppPath = appPath;
-						break;
-					}
-				} catch {
-					continue;
-				}
-			}
-		} catch {}
-
-		exportedAppPath ??= exportApp({
-			srcDir,
-			xcArchivePath,
-			productName,
-			developmentTeam,
-		}).exportedAppPath;
-
-		const {dmgPath} = dmg({
-			exportedAppPath,
-			productName,
-			marketingVersion,
 			keychainProfile,
-			developmentTeam,
-		});
-
-		sparkle({
-			srcDir,
+			destination,
 			outDir,
-			scheme,
-			dmgPath,
 			fullReleaseNotesUrl,
 			appHomepage,
-		});
-	});
+		}: {
+			srcDir: string;
+			scheme: string;
+			keychainProfile: string;
+			destination: string;
+			outDir: string;
+			fullReleaseNotesUrl?: string;
+			appHomepage?: string;
+		}) => {
+			green('Gathering build settings...');
+			const buildSettings = getBuildSettings({
+				srcDir,
+				scheme,
+				destinationSpecifier: destination,
+			});
+
+			const {
+				PRODUCT_NAME: productName,
+				MARKETING_VERSION: marketingVersion,
+				CURRENT_PROJECT_VERSION: currentProjectVersion,
+				CODE_SIGN_IDENTITY: codeSignIdentity,
+				CODE_SIGN_STYLE: codeSignStyle,
+				DEVELOPMENT_TEAM: developmentTeam,
+			} = buildSettings;
+			green(`Product name: ${productName}`);
+			green(`Version: ${marketingVersion}`);
+			green(`Build: ${currentProjectVersion}`);
+			green(`Code sign identity: ${codeSignIdentity}`);
+			green(`Code sign style: ${codeSignStyle}`);
+
+			const archivesPathLocal = join(srcDir, archivesPath);
+			let xcArchivePath: string | undefined;
+			const infoPlistPattern = join(
+				archivesPathLocal,
+				'*.xcarchive/Info.plist',
+			);
+
+			try {
+				for (const infoPlistPath of globSync(infoPlistPattern)) {
+					try {
+						const parsedPlist = plist.parse(
+							readFileSync(infoPlistPath, 'utf8'),
+						) as any;
+
+						const bundleVersion = Number(
+							parsedPlist.ApplicationProperties.CFBundleVersion,
+						);
+						const currentProjectVersionNumber = Number(currentProjectVersion);
+
+						if (bundleVersion === currentProjectVersionNumber) {
+							const archivePath = dirname(infoPlistPath);
+							green(
+								`Found existing archive with matching version (${currentProjectVersion}): ${archivePath}`,
+							);
+							xcArchivePath = archivePath;
+							break;
+						}
+					} catch {
+						continue;
+					}
+				}
+			} catch {}
+
+			xcArchivePath ??= archiveApp({
+				srcDir,
+				scheme,
+				platform: destination,
+				productName,
+				developmentTeam,
+			}).xcArchivePath;
+
+			let exportedAppPath: string | undefined;
+			const exportedInfoPlistPattern = join(
+				srcDir,
+				exportsPath,
+				'*/*.app/Contents/Info.plist',
+			);
+
+			try {
+				for (const infoPlistPath of globSync(exportedInfoPlistPattern)) {
+					try {
+						const parsedPlist = plist.parse(
+							readFileSync(infoPlistPath, 'utf8'),
+						) as any;
+
+						const bundleVersion = Number(parsedPlist.CFBundleVersion);
+						const currentProjectVersionNumber = Number(currentProjectVersion);
+
+						if (bundleVersion === currentProjectVersionNumber) {
+							// Extract app path from Info.plist path (go up two levels: Contents -> .app)
+							const appPath = dirname(dirname(infoPlistPath));
+							green(
+								`Found existing exported app with matching version (${currentProjectVersion}): ${appPath}`,
+							);
+							exportedAppPath = appPath;
+							break;
+						}
+					} catch {
+						continue;
+					}
+				}
+			} catch {}
+
+			exportedAppPath ??= exportApp({
+				srcDir,
+				xcArchivePath,
+				productName,
+				developmentTeam,
+			}).exportedAppPath;
+
+			const {dmgPath} = dmg({
+				exportedAppPath,
+				productName,
+				marketingVersion,
+				keychainProfile,
+				developmentTeam,
+			});
+
+			sparkle({
+				srcDir,
+				outDir,
+				scheme,
+				dmgPath,
+				fullReleaseNotesUrl,
+				appHomepage,
+			});
+
+			green('Done!');
+		},
+	);
 
 program
 	.command('sparkle')
@@ -182,36 +196,38 @@ program
 	.option('--scheme <scheme>', 'Xcode scheme name')
 	.option('--full-release-notes-url <url>', 'URL for full release notes')
 	.option('--app-homepage <url>', 'App homepage URL')
-	.action(async ({
-		srcDir,
-		outDir,
-		dmgPath,
-		scheme,
-		fullReleaseNotesUrl,
-		appHomepage,
-	}: {
-		outDir: string;
-		dmgPath: string;
-		srcDir: string;
-		scheme: string;
-		fullReleaseNotesUrl?: string;
-		appHomepage?: string;
-	}) => {
-		try {
-			sparkle({
-				dmgPath,
-				srcDir,
-				outDir,
-				scheme,
-				fullReleaseNotesUrl,
-				appHomepage,
-			});
-		} catch (error) {
-			const errorMessage
-          = error instanceof Error ? error.message : String(error);
-			red(`Error: ${errorMessage}`);
-			process.exit(1);
-		}
-	});
+	.action(
+		async ({
+			srcDir,
+			outDir,
+			dmgPath,
+			scheme,
+			fullReleaseNotesUrl,
+			appHomepage,
+		}: {
+			outDir: string;
+			dmgPath: string;
+			srcDir: string;
+			scheme: string;
+			fullReleaseNotesUrl?: string;
+			appHomepage?: string;
+		}) => {
+			try {
+				sparkle({
+					dmgPath,
+					srcDir,
+					outDir,
+					scheme,
+					fullReleaseNotesUrl,
+					appHomepage,
+				});
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
+				red(`Error: ${errorMessage}`);
+				process.exit(1);
+			}
+		},
+	);
 
 program.parse();

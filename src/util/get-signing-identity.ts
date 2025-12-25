@@ -2,7 +2,11 @@ import {execCommand} from './exec-command.js';
 import {green} from './colors.js';
 
 export const getSigningIdentity = (teamId: string): string => {
-	const stdout = execCommand('security', ['find-identity', '-vp', 'codesigning']);
+	const stdout = execCommand('security', [
+		'find-identity',
+		'-vp',
+		'codesigning',
+	]);
 
 	// Security find-identity -vp codesigning, example output:
 	// 1) <identity-hash> "Apple Development: <team-name> (<team-id>)"
@@ -11,8 +15,11 @@ export const getSigningIdentity = (teamId: string): string => {
 
 	const identities = stdout
 		.split('\n')
-		.filter(line => line.includes('Developer ID Application') && line.includes(teamId))
-		.map(line => {
+		.filter(
+			(line) =>
+				line.includes('Developer ID Application') && line.includes(teamId),
+		)
+		.map((line) => {
 			const match = /"([^"]+)"/.exec(line);
 			return match ? match[1] : '';
 		});
@@ -22,7 +29,9 @@ export const getSigningIdentity = (teamId: string): string => {
 	if (!identity) {
 		throw new Error('No codesign identity found. Aborting.');
 	} else if (identities.length > 1) {
-		green(`Found multiple suitable codesigning identities. Using the first: ${identity}`);
+		green(
+			`Found multiple suitable codesigning identities. Using the first: ${identity}`,
+		);
 	} else {
 		green(`Using codesigning identity: ${identity}`);
 	}

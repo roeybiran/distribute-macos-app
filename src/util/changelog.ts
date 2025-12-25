@@ -25,12 +25,16 @@ export const changelogToHtml = (
 	const sections = entries.map((entry, index) => {
 		// Validate required fields
 		if (!entry.version || !entry.date) {
-			throw new Error(`Entry at index ${index} must have version and date fields`);
+			throw new Error(
+				`Entry at index ${index} must have version and date fields`,
+			);
 		}
 
 		// Validate version format (semver)
 		if (!isValidSemver(entry.version)) {
-			throw new Error(`Invalid version format at index ${index}: "${entry.version}". Must follow semver format (e.g., 1.0.0 or 1.16)`);
+			throw new Error(
+				`Invalid version format at index ${index}: "${entry.version}". Must follow semver format (e.g., 1.0.0 or 1.16)`,
+			);
 		}
 
 		// Handle optional notes array
@@ -52,7 +56,9 @@ export const changelogToHtml = (
 		const fixSection = makeSection(entry, 'fix');
 		const issueSection = makeSection(entry, 'issue');
 
-		const content = formatHtml([notes, newSection, changeSection, fixSection, issueSection].join('\n'));
+		const content = formatHtml(
+			[notes, newSection, changeSection, fixSection, issueSection].join('\n'),
+		);
 
 		writeFileSync(join(outDir, `${appName} ${entry.version}.html`), content);
 
@@ -60,7 +66,7 @@ export const changelogToHtml = (
 	});
 
 	const fullChangelog = sections
-		.map(section => {
+		.map((section) => {
 			const dateObject = new Date(section.date);
 			const formattedDate = dateObject.toLocaleDateString('en-US', {
 				month: 'short',
@@ -99,7 +105,7 @@ const makeSection = (entry: any, type: string): string => {
 		issue: 'Known Issues',
 	};
 
-	const listItems = items.map(item => itemToHtml(item)).join('');
+	const listItems = items.map((item) => itemToHtml(item)).join('');
 
 	return `
     <div class="entry">
@@ -129,7 +135,7 @@ const itemToHtml = (item: string | Record<string, unknown>): string => {
 				}
 
 				const nestedItems: string = value
-					.map(item => itemToHtml(item))
+					.map((item) => itemToHtml(item))
 					.join('');
 				return `
         <li>
@@ -142,7 +148,9 @@ const itemToHtml = (item: string | Record<string, unknown>): string => {
 			.join('\n');
 	}
 
-	throw new Error('List items must be strings or objects with string keys and array values');
+	throw new Error(
+		'List items must be strings or objects with string keys and array values',
+	);
 };
 
 const formatHtml = (html: string): string => {
@@ -156,7 +164,7 @@ const formatHtml = (html: string): string => {
 };
 
 const isValidSemver = (version: string): boolean => {
-	const semverRegex
-    = /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*))*))?(?:\+([\da-zA-Z-]+(?:\.[\da-zA-Z-]+)*))?$/;
+	const semverRegex =
+		/^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*))*))?(?:\+([\da-zA-Z-]+(?:\.[\da-zA-Z-]+)*))?$/;
 	return semverRegex.test(version);
 };

@@ -34,4 +34,3 @@ export const getBuildSettings = ({
 	const [{buildSettings}] = json;
 	return buildSettings;
 };
-

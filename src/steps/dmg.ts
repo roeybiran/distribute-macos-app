@@ -35,8 +35,8 @@ export const dmg = ({
 		]);
 	} catch (error) {
 		if (
-			!(error instanceof Error)
-			|| !error.message.includes('already exists')
+			!(error instanceof Error) ||
+			!error.message.includes('already exists')
 		) {
 			throw error;
 		}
@@ -45,13 +45,9 @@ export const dmg = ({
 	const dmgPath = join(outputDir, `${productName} ${marketingVersion}.dmg`);
 
 	green('Notarizing DMG...');
-	const staplerValidation = execaSync('/usr/bin/stapler', [
-		'validate',
-		'-q',
-		dmgPath,
-	]);
-
-	if (staplerValidation.exitCode !== 0) {
+	try {
+		execaSync('/usr/bin/stapler', ['validate', '-q', dmgPath]);
+	} catch {
 		execCommand('xcrun', [
 			'notarytool',
 			'submit',

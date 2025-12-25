@@ -2,10 +2,7 @@ import {mkdirSync, readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {execCommand} from '../util/exec-command.js';
 import {green} from '../util/colors.js';
-import {
-	archivesPath,
-	buildConfiguration,
-} from '../constants.js';
+import {archivesPath, buildConfiguration} from '../constants.js';
 
 const releaseBranches = ['main', 'master'];
 
@@ -26,7 +23,9 @@ export const archiveApp = ({
 		cwd: srcDir,
 	});
 	if (gitStatus.trim()) {
-		throw new Error('Git working directory is dirty. Please commit or stash changes before building.');
+		throw new Error(
+			'Git working directory is dirty. Please commit or stash changes before building.',
+		);
 	}
 
 	const currentBranch = execCommand(
@@ -35,11 +34,13 @@ export const archiveApp = ({
 		{cwd: srcDir},
 	);
 	if (!releaseBranches.includes(currentBranch.trim())) {
-		throw new Error(`Not on release branch (current: ${currentBranch.trim()}). Please switch to ${releaseBranches.join(' or ')} branch.`);
+		throw new Error(
+			`Not on release branch (current: ${currentBranch.trim()}). Please switch to ${releaseBranches.join(' or ')} branch.`,
+		);
 	}
 
 	const files = readdirSync(srcDir);
-	if (!files.some(file => file.endsWith('.xcodeproj'))) {
+	if (!files.some((file) => file.endsWith('.xcodeproj'))) {
 		throw new Error('Source directory must contain an .xcodeproj file');
 	}
 
@@ -57,8 +58,28 @@ export const archiveApp = ({
 
 	const sharedArgs = ['-scheme', scheme];
 	green('Testing...');
-	execCommand('xcodebuild', ['build-for-testing', '-quiet', '-destination', 'platform=macOS,arch=arm64', ...sharedArgs], {cwd: srcDir});
-	execCommand('xcodebuild', ['test', '-quiet', '-destination', 'platform=macOS,arch=arm64', ...sharedArgs], {cwd: srcDir});
+	execCommand(
+		'xcodebuild',
+		[
+			'build-for-testing',
+			'-quiet',
+			'-destination',
+			'platform=macOS,arch=arm64',
+			...sharedArgs,
+		],
+		{cwd: srcDir},
+	);
+	execCommand(
+		'xcodebuild',
+		[
+			'test',
+			'-quiet',
+			'-destination',
+			'platform=macOS,arch=arm64',
+			...sharedArgs,
+		],
+		{cwd: srcDir},
+	);
 
 	green(`Archiving to: ${xcArchivePath}`);
 	execCommand(
