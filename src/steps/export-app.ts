@@ -9,12 +9,12 @@ export const exportApp = ({
 	srcDir,
 	xcArchivePath,
 	productName,
-	teamId,
+	developmentTeam,
 }: {
 	srcDir: string;
 	xcArchivePath: string;
 	productName: string;
-	teamId: string;
+	developmentTeam: string;
 }): {exportedAppPath: string} => {
 	const xcArchiveName = basename(xcArchivePath, '.xcarchive');
 	const exportsPathLocal = join(srcDir, exportsPath);
@@ -32,7 +32,7 @@ export const exportApp = ({
 		method: 'developer-id',
 		// SigningStyle: "manual",
 		// signingCertificate: "Developer ID Application",
-		team: teamId,
+		team: developmentTeam,
 	};
 
 	writeFileSync(plistPath, plist.build(exportOptionsPlist));

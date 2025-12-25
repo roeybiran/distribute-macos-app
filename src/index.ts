@@ -28,7 +28,6 @@ program
 		'--keychain-profile <profile>',
 		'Keychain profile for notarization',
 	)
-	.requiredOption('--team-id <teamId>', 'Apple Developer Team ID')
 	.requiredOption(
 		'--out-dir <path>',
 		'Output directory containing all releases',
@@ -49,7 +48,6 @@ program
 		srcDir,
 		scheme,
 		keychainProfile,
-		teamId,
 		destination,
 		outDir,
 		fullReleaseNotesUrl,
@@ -58,7 +56,6 @@ program
 		srcDir: string;
 		scheme: string;
 		keychainProfile: string;
-		teamId: string;
 		destination: string;
 		outDir: string;
 		fullReleaseNotesUrl?: string;
@@ -77,6 +74,7 @@ program
 			CURRENT_PROJECT_VERSION: currentProjectVersion,
 			CODE_SIGN_IDENTITY: codeSignIdentity,
 			CODE_SIGN_STYLE: codeSignStyle,
+			DEVELOPMENT_TEAM: developmentTeam,
 		} = buildSettings;
 		green(`Product name: ${productName}`);
 		green(`Version: ${marketingVersion}`);
@@ -116,7 +114,7 @@ program
 			scheme,
 			platform: destination,
 			productName,
-			teamId,
+			developmentTeam,
 		}).xcArchivePath;
 
 		let exportedAppPath: string | undefined;
@@ -151,7 +149,7 @@ program
 			srcDir,
 			xcArchivePath,
 			productName,
-			teamId,
+			developmentTeam,
 		}).exportedAppPath;
 
 		const {dmgPath} = dmg({
@@ -159,12 +157,13 @@ program
 			productName,
 			marketingVersion,
 			keychainProfile,
-			teamId,
+			developmentTeam,
 		});
 
 		sparkle({
 			srcDir,
 			outDir,
+			scheme,
 			dmgPath,
 			fullReleaseNotesUrl,
 			appHomepage,
@@ -180,18 +179,21 @@ program
 	)
 	.option('--dmg-path <path>', 'Path to the new DMG file')
 	.option('--src-dir <path>', 'Xcode project path', process.cwd())
+	.option('--scheme <scheme>', 'Xcode scheme name')
 	.option('--full-release-notes-url <url>', 'URL for full release notes')
 	.option('--app-homepage <url>', 'App homepage URL')
 	.action(async ({
 		srcDir,
 		outDir,
 		dmgPath,
+		scheme,
 		fullReleaseNotesUrl,
 		appHomepage,
 	}: {
 		outDir: string;
 		dmgPath: string;
 		srcDir: string;
+		scheme: string;
 		fullReleaseNotesUrl?: string;
 		appHomepage?: string;
 	}) => {
@@ -200,6 +202,7 @@ program
 				dmgPath,
 				srcDir,
 				outDir,
+				scheme,
 				fullReleaseNotesUrl,
 				appHomepage,
 			});

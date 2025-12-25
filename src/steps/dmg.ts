@@ -11,18 +11,18 @@ export const dmg = ({
 	productName,
 	marketingVersion,
 	keychainProfile,
-	teamId,
+	developmentTeam,
 }: {
 	exportedAppPath: string;
 	productName: string;
 	marketingVersion: string;
 	keychainProfile: string;
-	teamId: string;
+	developmentTeam: string;
 }) => {
 	checkDmgDependencies();
 	checkNotaryCredentials(keychainProfile);
 
-	const identity = getSigningIdentity(teamId);
+	const identity = getSigningIdentity(developmentTeam);
 
 	const outputDir = dirname(exportedAppPath);
 

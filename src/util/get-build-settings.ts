@@ -4,11 +4,11 @@ import {execCommand} from './exec-command.js';
 export const getBuildSettings = ({
 	srcDir,
 	scheme,
-	destinationSpecifier,
+	destinationSpecifier = 'generic/platform=macOS',
 }: {
 	srcDir: string;
 	scheme: string;
-	destinationSpecifier: string;
+	destinationSpecifier?: string;
 }) => {
 	const args = [
 		'-scheme',

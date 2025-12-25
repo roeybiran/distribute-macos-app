@@ -3,7 +3,6 @@ import {join} from 'node:path';
 import {execCommand} from '../util/exec-command.js';
 import {green} from '../util/colors.js';
 import {
-	derivedDataPath,
 	archivesPath,
 	buildConfiguration,
 } from '../constants.js';
@@ -15,13 +14,13 @@ export const archiveApp = ({
 	scheme,
 	platform,
 	productName,
-	teamId,
+	developmentTeam,
 }: {
 	srcDir: string;
 	scheme: string;
 	platform: string;
 	productName: string;
-	teamId: string;
+	developmentTeam: string;
 }): {xcArchivePath: string} => {
 	const gitStatus = execCommand('git', ['status', '-s'], {
 		cwd: srcDir,
@@ -45,7 +44,6 @@ export const archiveApp = ({
 	}
 
 	const archivesPathLocal = join(srcDir, archivesPath);
-	const derivedDataPathLocal = join(srcDir, derivedDataPath);
 
 	const date = new Date();
 	const timestamp = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
@@ -57,7 +55,7 @@ export const archiveApp = ({
 	green('Cleaning...');
 	execCommand('xcodebuild', ['clean'], {cwd: srcDir});
 
-	const sharedArgs = ['-scheme', scheme, '-derivedDataPath', derivedDataPathLocal];
+	const sharedArgs = ['-scheme', scheme];
 	green('Testing...');
 	execCommand('xcodebuild', ['build-for-testing', '-quiet', '-destination', 'platform=macOS,arch=arm64', ...sharedArgs], {cwd: srcDir});
 	execCommand('xcodebuild', ['test', '-quiet', '-destination', 'platform=macOS,arch=arm64', ...sharedArgs], {cwd: srcDir});
@@ -74,7 +72,7 @@ export const archiveApp = ({
 			buildConfiguration,
 			'-destination',
 			platform,
-			`DEVELOPMENT_TEAM=${teamId}`,
+			`DEVELOPMENT_TEAM=${developmentTeam}`,
 		],
 		{cwd: srcDir},
 	);
