@@ -36,7 +36,7 @@ export const exportApp = async ({
 	writeFileSync(plistPath, plist.build(exportOptionsPlist));
 	await execa({cwd: srcDir})`xcodebuild -exportArchive -archivePath ${xcArchivePath} -exportPath ${exportedArchivePathLocal} -exportOptionsPlist ${plistPath}`;
 
-	green(`✓ App exported: ${exportedAppPath}`);
+	green(`App exported: ${exportedAppPath}`);
 
 	return {exportedAppPath};
 };

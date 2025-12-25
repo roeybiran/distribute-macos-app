@@ -120,7 +120,7 @@ program
 				await archiveApp({
 					srcDir,
 					scheme,
-					platform: destination,
+					releasePlatform: destination,
 					productName,
 				})
 			).xcArchivePath;

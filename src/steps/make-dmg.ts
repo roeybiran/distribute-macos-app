@@ -26,30 +26,20 @@ export const dmg = async ({
 	const outputDir = dirname(exportedAppPath);
 
 	green('Creating and code signing DMG...');
-	try {
-		await execa`create-dmg ${exportedAppPath} ${outputDir} --identity=${identity}`;
-	} catch (error) {
-		if (
-			!(error instanceof Error) ||
-			!error.message.includes('already exists')
-		) {
-			throw error;
-		}
-	}
+	await execa`create-dmg ${exportedAppPath} ${outputDir} --identity=${identity} --overwrite`;
 
 	const dmgPath = join(outputDir, `${productName} ${marketingVersion}.dmg`);
 
-	green('Notarizing DMG...');
 	try {
 		await execa`xcrun stapler validate -q ${dmgPath}`;
 	} catch {
+		green('Notarizing DMG...');
 		await execa`xcrun notarytool submit ${dmgPath} --keychain-profile=${keychainProfile} --wait`;
-		// Staple
 		green('Stapling DMG with notarization ticket...');
 		await execa`xcrun stapler staple ${dmgPath}`;
 	}
 
-	green('✓ DMG created:');
+	green('DMG created:');
 	green(dmgPath);
 
 	return {dmgPath};

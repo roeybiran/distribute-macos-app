@@ -9,12 +9,12 @@ const releaseBranches = ['main', 'master'];
 export const archiveApp = async ({
 	srcDir,
 	scheme,
-	platform,
+	releasePlatform,
 	productName,
 }: {
 	srcDir: string;
 	scheme: string;
-	platform: string;
+	releasePlatform: string;
 	productName: string;
 }): Promise<{xcArchivePath: string}> => {
 	const {stdout: gitStatus} = await execa({cwd: srcDir})`git status -s`;
@@ -49,12 +49,13 @@ export const archiveApp = async ({
 	await execa({cwd: srcDir})`xcodebuild clean`;
 
 	green('Testing...');
-	const sharedArgs = `-scheme ${scheme} -destination ${platform} -quiet`;
-	await execa({cwd: srcDir})`xcodebuild build-for-testing ${sharedArgs}`;
-	await execa({cwd: srcDir})`xcodebuild test ${sharedArgs}`;
+	const sharedArgs = ['-scheme', scheme, '-quiet'];
+	const testPlatform = 'platform=macOS,arch=arm64';
+	await execa({cwd: srcDir})`xcodebuild build-for-testing ${sharedArgs} -destination ${testPlatform}`;
+	await execa({cwd: srcDir})`xcodebuild test ${sharedArgs} -destination ${testPlatform}`;
 
 	green(`Archiving to: ${xcArchivePath}`);
-	await execa({cwd: srcDir})`xcodebuild archive ${sharedArgs} -configuration ${buildConfiguration} -archivePath ${xcArchivePath}`;
+	await execa({cwd: srcDir})`xcodebuild archive ${sharedArgs} -destination ${releasePlatform} -configuration ${buildConfiguration} -archivePath ${xcArchivePath}`;
 
 	return {
 		xcArchivePath,
