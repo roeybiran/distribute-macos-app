@@ -1,5 +1,5 @@
 import {join, dirname} from 'node:path';
-import {execa, execaSync} from 'execa';
+import {execa} from 'execa';
 import {getSigningIdentity} from '../util/get-signing-identity.js';
 import {checkNotaryCredentials} from '../util/check-notary-credentials.js';
 import {checkDmgDependencies} from '../util/check-dmg-dependencies.js';
@@ -27,11 +27,7 @@ export const dmg = async ({
 
 	green('Creating and code signing DMG...');
 	try {
-		execaSync('create-dmg', [
-			exportedAppPath,
-			outputDir,
-			`--identity=${identity}`,
-		]);
+		await execa`create-dmg ${exportedAppPath} ${outputDir} --identity=${identity}`;
 	} catch (error) {
 		if (
 			!(error instanceof Error) ||
@@ -45,7 +41,7 @@ export const dmg = async ({
 
 	green('Notarizing DMG...');
 	try {
-		execaSync('/usr/bin/stapler', ['validate', '-q', dmgPath]);
+		await execa`xcrun stapler validate -q ${dmgPath}`;
 	} catch {
 		await execa`xcrun notarytool submit ${dmgPath} --keychain-profile=${keychainProfile} --wait`;
 		// Staple
