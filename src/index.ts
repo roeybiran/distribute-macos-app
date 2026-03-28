@@ -149,7 +149,6 @@ program
 				await sparkle({
 					srcDir,
 					outDir: sparkleOutDir,
-					scheme,
 					buildSettings,
 					dmgPath,
 					fullReleaseNotesUrl,

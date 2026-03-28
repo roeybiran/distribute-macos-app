@@ -33,10 +33,9 @@ npm run build && node dist/index.js preview-dmg \
 - The horizontal gap between icon centers is `256 pt`.
 - With the default `80 pt` icon size, the visible gap between the two icon edges is `176 pt`.
 - Without a custom background, `appdmg` falls back to its default window size of `640x480`, so the default icon `y` position is `240`.
-- If you provide `--dmg-background`, the main background image must be exactly `640x480`.
-- If you provide a matching `@2x` sibling, it must be exactly `1280x960`.
-- Background assets outside that `640x480` / `1280x960` contract are rejected.
-- The icon layout stays point-based, so with or without a `@2x` sibling the icon `y` position remains `240`.
+- If you provide `--dmg-background`, the tool passes it straight through to `appdmg` without inspecting its size.
+- The icon layout stays point-based, so with or without a custom background or `@2x` sibling the icon `y` position remains `240`.
+- For backgrounds that line up with the default layout, use `640x480` for the base image and `1280x960` for an optional matching `@2x` image.
 - For Figma, make the frame the exact pixel size you want the DMG window to be, leave clear space around those two icon centers, and keep extra room below each icon for the Finder label text.
 - If you want a retina background, export a matching `@2x` asset next to the base image, for example `background.png` and `background@2x.png`.
 - `preview-dmg` always uses the built-in `DUMMY.app` fixture, skips code signing and notarization, stages the fixture app in a temp directory, and leaves only the final DMG in the chosen output directory.
@@ -50,6 +49,8 @@ npx -y @roeybiran/distribute-macos-app release \
   --sparkle \
   --out-dir releases
 ```
+
+When `--sparkle` is enabled, the source directory must include a `CHANGELOG.md` file. The tool copies that file next to the built DMG using the same basename, and `generate_appcast` picks it up natively as Markdown release notes.
 
 ## Read More
 

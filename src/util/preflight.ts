@@ -45,9 +45,9 @@ export const preflightRelease = async ({
 	await getSigningIdentity(buildSettings.DEVELOPMENT_TEAM);
 
 	if (includeSparkle) {
-		const changelogPath = join(srcDir, 'CHANGELOG.yaml');
+		const changelogPath = join(srcDir, 'CHANGELOG.md');
 		if (!existsSync(changelogPath)) {
-			throw new Error(`CHANGELOG.yaml not found at ${changelogPath}`);
+			throw new Error(`CHANGELOG.md not found at ${changelogPath}`);
 		}
 
 		const appcastToolPath = resolveAppcastToolPath(buildSettings);

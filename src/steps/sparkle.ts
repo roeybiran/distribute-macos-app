@@ -1,52 +1,40 @@
 import {
-	mkdirSync, copyFileSync, unlinkSync, globSync,
+	mkdirSync, copyFileSync,
 } from 'node:fs';
 import {join, basename} from 'node:path';
 import {execa} from 'execa';
-import {changelogToHtml} from '../util/make-changelog.js';
 import {green} from '../util/colors.js';
-import {type BuildSettings, getBuildSettings} from '../util/get-build-settings.js';
+import {type BuildSettings} from '../util/get-build-settings.js';
 import {resolveAppcastToolPath} from '../util/preflight.js';
 
 export const sparkle = async ({
 	dmgPath,
 	srcDir,
 	outDir,
-	scheme,
 	buildSettings,
 	fullReleaseNotesUrl,
 	appHomepage,
 }: {
 	srcDir: string;
 	outDir: string;
-	scheme: string;
-	buildSettings?: BuildSettings;
-	dmgPath?: string | undefined;
+	buildSettings: BuildSettings;
+	dmgPath: string;
 	fullReleaseNotesUrl?: string | undefined;
 	appHomepage?: string | undefined;
 }) => {
-	const changelogBasename = basename(srcDir);
-	const changelogPath = join(srcDir, 'CHANGELOG.yaml');
+	const changelogPath = join(srcDir, 'CHANGELOG.md');
 
-	changelogToHtml(changelogPath, changelogBasename, outDir);
-	// Create sparkle directory if it doesn't exist
 	mkdirSync(outDir, {recursive: true});
 
-	// Copy DMG to sparkle directory
-	if (dmgPath) {
-		const dmgName = basename(dmgPath);
-		const targetDmgPath = join(outDir, dmgName);
-		green(`Copying DMG to ${targetDmgPath}...`);
-		copyFileSync(dmgPath, targetDmgPath);
-	}
+	const dmgName = basename(dmgPath);
+	const releaseNotesPath = join(outDir, `${basename(dmgPath, '.dmg')}.md`);
+	const targetDmgPath = join(outDir, dmgName);
+	copyFileSync(changelogPath, releaseNotesPath);
+	green(`Copying DMG to ${targetDmgPath}...`);
+	copyFileSync(dmgPath, targetDmgPath);
 
 	green('Generating Appcast.xml...');
-
-	const resolvedBuildSettings = buildSettings ?? await getBuildSettings({
-		srcDir,
-		scheme,
-	});
-	const appcastTool = resolveAppcastToolPath(resolvedBuildSettings);
+	const appcastTool = resolveAppcastToolPath(buildSettings);
 
 	const args: string[] = [];
 	if (fullReleaseNotesUrl) {
@@ -60,12 +48,4 @@ export const sparkle = async ({
 	args.push('--auto-prune-update-files', outDir);
 
 	await execa(appcastTool, args);
-
-	green('Deleting partial release note files...');
-	const changelogFiles = globSync(`${changelogBasename} *.html`, {
-		cwd: outDir,
-	});
-	for (const file of changelogFiles) {
-		unlinkSync(join(outDir, file));
-	}
 };

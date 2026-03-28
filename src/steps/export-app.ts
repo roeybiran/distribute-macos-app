@@ -1,6 +1,5 @@
 import {writeFileSync, mkdirSync} from 'node:fs';
 import {join, basename} from 'node:path';
-import plist from 'plist';
 import {execa} from 'execa';
 import {green} from '../util/colors.js';
 import {exportsPath} from '../constants.js';
@@ -30,14 +29,19 @@ export const exportApp = async ({
 	mkdirSync(exportedArchivePathLocal, {recursive: true});
 
 	green('Exporting app...');
-
-	const exportOptionsPlist = {
-		destination: 'export',
-		method,
-		team: developmentTeam,
-	};
-
-	writeFileSync(plistPath, plist.build(exportOptionsPlist));
+	writeFileSync(plistPath, `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>destination</key>
+	<string>export</string>
+	<key>method</key>
+	<string>${method}</string>
+	<key>team</key>
+	<string>${developmentTeam}</string>
+</dict>
+</plist>
+`);
 	await execa({cwd: srcDir})`xcodebuild -exportArchive -archivePath ${xcArchivePath} -exportPath ${exportedArchivePathLocal} -exportOptionsPlist ${plistPath}`;
 
 	green(`App exported: ${exportedAppPath}`);
