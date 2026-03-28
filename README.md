@@ -7,7 +7,48 @@ Work in progress!
 ## Usage
 
 ```shell
-npx -y @roeybiran/distribute-macos-app
+npx -y @roeybiran/distribute-macos-app release \
+  --scheme MyApp \
+  --keychain-profile notary-profile
+```
+
+Optional DMG customization:
+`--dmg-background path/to/background.png`
+
+Fast local DMG preview with the unsigned `DUMMY.app` fixture:
+
+```shell
+npm run build && node dist/index.js preview-dmg \
+  --dmg-background /absolute/path/to/background.png \
+  --reveal
+```
+
+## DMG Backgrounds
+
+- The DMG icon layout is explicit, not automatic.
+- The app icon center is currently placed at `(192, 240)` when no custom background is used.
+- The `/Applications` link center is currently placed at `(448, 240)` when no custom background is used.
+- The default icon size is `80`.
+- The `x` and `y` values are relative to each icon's center.
+- The horizontal gap between icon centers is `256 pt`.
+- With the default `80 pt` icon size, the visible gap between the two icon edges is `176 pt`.
+- Without a custom background, `appdmg` falls back to its default window size of `640x480`, so the default icon `y` position is `240`.
+- If you provide `--dmg-background`, the main background image must be exactly `640x480`.
+- If you provide a matching `@2x` sibling, it must be exactly `1280x960`.
+- Background assets outside that `640x480` / `1280x960` contract are rejected.
+- The icon layout stays point-based, so with or without a `@2x` sibling the icon `y` position remains `240`.
+- For Figma, make the frame the exact pixel size you want the DMG window to be, leave clear space around those two icon centers, and keep extra room below each icon for the Finder label text.
+- If you want a retina background, export a matching `@2x` asset next to the base image, for example `background.png` and `background@2x.png`.
+- `preview-dmg` always uses the built-in `DUMMY.app` fixture, skips code signing and notarization, stages the fixture app in a temp directory, and leaves only the final DMG in the chosen output directory.
+
+Generate Sparkle files as part of the same release flow:
+
+```shell
+npx -y @roeybiran/distribute-macos-app release \
+  --scheme MyApp \
+  --keychain-profile notary-profile \
+  --sparkle \
+  --out-dir releases
 ```
 
 ## Read More
@@ -41,8 +82,6 @@ Generating the profile can be done through [App Store Connect](https://appstorec
 
 ### Creating DMGs
 
-- [create-dmg/create-dmg](https://github.com/create-dmg/create-dmg/)
-- [sindresorhus/create-dmg](https://github.com/sindresorhus/create-dmg/)
 - [LinusU/node-appdmg](https://github.com/LinusU/node-appdmg/)
 - [dmgbuild/dmgbuild](https://github.com/dmgbuild/dmgbuild/)
 

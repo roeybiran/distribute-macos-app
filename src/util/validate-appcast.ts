@@ -1,18 +1,38 @@
 import {readFileSync} from 'node:fs';
 
-// Validate appcast.xml has incrementing versions
+// Validate appcast.xml has unique Sparkle version fields
 export const validateAppcast = (appcastPath: string): void => {
 	const xmlContent = readFileSync(appcastPath, 'utf8');
-	const versionRegex = /<sparkle:version>([^<]+)<\/sparkle:version>/g;
-	const matches = [...xmlContent.matchAll(versionRegex)];
-	const versions = matches.map((match) => Number.parseInt(match[1].trim(), 10));
+	for (const [key, patterns] of [
+		[
+			'sparkle:version',
+			[
+				/<sparkle:version>([^<]+)<\/sparkle:version>/g,
+				/\bsparkle:version=(["'])(.*?)\1/g,
+			],
+		],
+		[
+			'sparkle:shortVersionString',
+			[
+				/<sparkle:shortVersionString>([^<]+)<\/sparkle:shortVersionString>/g,
+				/\bsparkle:shortVersionString=(["'])(.*?)\1/g,
+			],
+		],
+	] as const) {
+		const seen = new Set<string>();
+		for (const pattern of patterns) {
+			for (const match of xmlContent.matchAll(pattern)) {
+				const value = match.at(-1)?.trim();
+				if (!value) {
+					continue;
+				}
 
-	for (let i = 1; i < versions.length; i++) {
-		const previousVersion = versions[i - 1];
-		const currentVersion = versions[i];
-		if (currentVersion >= previousVersion) {
-			const errorMessage = `Invalid version ordering: sparkle:version "${currentVersion}" at position ${i + 1} should be less than previous version "${previousVersion}" (items should be ordered newest to oldest)`;
-			throw new Error(errorMessage);
+				if (seen.has(value)) {
+					throw new Error(`Duplicate ${key} value: "${value}"`);
+				}
+
+				seen.add(value);
+			}
 		}
 	}
 };

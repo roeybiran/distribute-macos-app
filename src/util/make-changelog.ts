@@ -4,6 +4,27 @@ import prettier from '@prettier/sync';
 import yaml from 'js-yaml';
 import markdownit from 'markdown-it';
 
+type ChangelogItem = string | Record<string, ChangelogItem[]>;
+type ChangelogSectionName = 'new' | 'change' | 'fix' | 'issue';
+type ChangelogEntry = {
+	change?: ChangelogItem[];
+	date: Date | string;
+	fix?: ChangelogItem[];
+	issue?: ChangelogItem[];
+	new?: ChangelogItem[];
+	note?: string[];
+	version: string;
+};
+
+const sectionNames: ChangelogSectionName[] = ['new', 'change', 'fix', 'issue'];
+
+const sectionTitles: Record<ChangelogSectionName, string> = {
+	new: 'New',
+	change: 'Changes',
+	fix: 'Fixes',
+	issue: 'Known Issues',
+};
+
 // Configure markdown-it
 const md = markdownit({
 	html: true,
@@ -23,50 +44,69 @@ export const changelogToHtml = (
 	}
 
 	const sections = entries.map((entry, index) => {
+		if (typeof entry !== 'object' || entry === null) {
+			throw new TypeError(`Entry at index ${index} must be an object`);
+		}
+
+		const entryRecord = entry as Record<string, unknown>;
+		const {version, date} = entryRecord;
+
 		// Validate required fields
-		if (!entry.version || !entry.date) {
-			throw new Error(
-				`Entry at index ${index} must have version and date fields`,
-			);
+		if (typeof version !== 'string' || (!(date instanceof Date) && typeof date !== 'string')) {
+			throw new TypeError(`Entry at index ${index} must have version and date fields`);
 		}
 
 		// Validate version format (semver)
-		if (!isValidSemver(entry.version)) {
-			throw new Error(
-				`Invalid version format at index ${index}: "${entry.version}". Must follow semver format (e.g., 1.0.0 or 1.16)`,
-			);
+		if (!isValidSemver(version)) {
+			throw new Error(`Invalid version format at index ${index}: "${version}". Must follow semver format (e.g., 1.0.0 or 1.16)`);
 		}
+
+		const typedEntry: ChangelogEntry = {version, date};
 
 		// Handle optional notes array
 		let notes = '';
-		if (entry.note) {
-			if (!Array.isArray(entry.note)) {
+		const noteValue = entryRecord.note;
+		if (noteValue !== undefined) {
+			if (!Array.isArray(noteValue) || noteValue.some(note => typeof note !== 'string')) {
 				throw new TypeError(`Note must be an array at index ${index}`);
 			}
 
-			const notesContent = entry.note
-				.map((note: string) => md.render(note))
+			const typedNotes = noteValue as string[];
+			typedEntry.note = typedNotes;
+			const notesContent = typedNotes
+				.map(note => md.render(note))
 				.join('');
 			notes = `<div class="note">${notesContent}</div>`;
 		}
 
+		for (const sectionName of sectionNames) {
+			const section = entryRecord[sectionName];
+			if (section === undefined) {
+				continue;
+			}
+
+			if (!Array.isArray(section)) {
+				throw new TypeError(`${sectionName} must be an array at index ${index}`);
+			}
+
+			typedEntry[sectionName] = section as ChangelogItem[];
+		}
+
 		// Create sections for each type of change
-		const newSection = makeSection(entry, 'new');
-		const changeSection = makeSection(entry, 'change');
-		const fixSection = makeSection(entry, 'fix');
-		const issueSection = makeSection(entry, 'issue');
+		const newSection = makeSection(typedEntry, 'new');
+		const changeSection = makeSection(typedEntry, 'change');
+		const fixSection = makeSection(typedEntry, 'fix');
+		const issueSection = makeSection(typedEntry, 'issue');
 
-		const content = formatHtml(
-			[notes, newSection, changeSection, fixSection, issueSection].join('\n'),
-		);
+		const content = formatHtml([notes, newSection, changeSection, fixSection, issueSection].join('\n'));
 
-		writeFileSync(join(outDir, `${appName} ${entry.version}.html`), content);
+		writeFileSync(join(outDir, `${appName} ${version}.html`), content);
 
-		return {version: entry.version, date: entry.date, content};
+		return {version, date, content};
 	});
 
 	const fullChangelog = sections
-		.map((section) => {
+		.map(section => {
 			const dateObject = new Date(section.date);
 			const formattedDate = dateObject.toLocaleDateString('en-US', {
 				month: 'short',
@@ -92,24 +132,17 @@ export const changelogToHtml = (
 	writeFileSync(join(outDir, `${appName}.html`), formatHtml(fullChangelog));
 };
 
-const makeSection = (entry: any, type: string): string => {
+const makeSection = (entry: ChangelogEntry, type: ChangelogSectionName): string => {
 	const items = entry[type];
 	if (!items || !Array.isArray(items) || items.length === 0) {
 		return '';
 	}
 
-	const titles: Record<string, string> = {
-		new: 'New',
-		change: 'Changes',
-		fix: 'Fixes',
-		issue: 'Known Issues',
-	};
-
-	const listItems = items.map((item) => itemToHtml(item)).join('');
+	const listItems = items.map(item => itemToHtml(item)).join('');
 
 	return `
     <div class="entry">
-      <p class="entry-label entry-label__${type}">${titles[type]}</p>
+      <p class="entry-label entry-label__${type}">${sectionTitles[type]}</p>
       <ul class="entry-list entry-list__${type}">
         ${listItems}
       </ul>
@@ -134,8 +167,9 @@ const itemToHtml = (item: string | Record<string, unknown>): string => {
 					throw new TypeError(`Value for key "${key}" must be an array`);
 				}
 
-				const nestedItems: string = value
-					.map((item) => itemToHtml(item))
+				const nestedValues = value as ChangelogItem[];
+				const nestedItems: string = nestedValues
+					.map(item => itemToHtml(item))
 					.join('');
 				return `
         <li>
@@ -148,9 +182,7 @@ const itemToHtml = (item: string | Record<string, unknown>): string => {
 			.join('\n');
 	}
 
-	throw new Error(
-		'List items must be strings or objects with string keys and array values',
-	);
+	throw new TypeError('List items must be strings or objects with string keys and array values');
 };
 
 const formatHtml = (html: string): string => {
@@ -164,7 +196,7 @@ const formatHtml = (html: string): string => {
 };
 
 const isValidSemver = (version: string): boolean => {
-	const semverRegex =
-		/^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*))*))?(?:\+([\da-zA-Z-]+(?:\.[\da-zA-Z-]+)*))?$/;
+	const semverRegex
+		= /^(0|[1-9]\d*)(?:\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?)?(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][\da-zA-Z-]*))*))?(?:\+([\da-zA-Z-]+(?:\.[\da-zA-Z-]+)*))?$/;
 	return semverRegex.test(version);
 };

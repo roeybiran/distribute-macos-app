@@ -10,11 +10,15 @@ export const exportApp = async ({
 	xcArchivePath,
 	productName,
 	developmentTeam,
+	// Override for integration tests: 'mac-application' works without a Developer ID cert.
+	// Production always uses the default.
+	method = 'developer-id',
 }: {
 	srcDir: string;
 	xcArchivePath: string;
 	productName: string;
 	developmentTeam: string;
+	method?: string;
 }): Promise<{exportedAppPath: string}> => {
 	const xcArchiveName = basename(xcArchivePath, '.xcarchive');
 	const exportsPathLocal = join(srcDir, exportsPath);
@@ -29,7 +33,7 @@ export const exportApp = async ({
 
 	const exportOptionsPlist = {
 		destination: 'export',
-		method: 'developer-id',
+		method,
 		team: developmentTeam,
 	};
 

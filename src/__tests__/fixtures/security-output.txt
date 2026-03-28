@@ -1,0 +1,3 @@
+  1) ABCDEF1234567890ABCDEF1234567890ABCDEF12 "Developer ID Application: Test Developer (TEAM1234AB)"
+  2) ABCDEF1234567890ABCDEF1234567890ABCDEF13 "Apple Development: Test Developer (TEAM1234AB)"
+     2 valid identities found
