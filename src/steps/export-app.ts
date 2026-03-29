@@ -1,4 +1,6 @@
-import {writeFileSync, mkdirSync} from 'node:fs';
+import {
+	writeFileSync, mkdirSync, existsSync, cpSync,
+} from 'node:fs';
 import {join, basename} from 'node:path';
 import {execa} from 'execa';
 import {green} from '../util/colors.js';
@@ -18,12 +20,14 @@ export const exportApp = async ({
 	productName: string;
 	developmentTeam: string;
 	method?: string;
-}): Promise<{exportedAppPath: string}> => {
+}): Promise<{exportedAppPath: string; exportedDsymPath: string}> => {
 	const xcArchiveName = basename(xcArchivePath, '.xcarchive');
 	const exportsPathLocal = join(srcDir, exportsPath);
 	const exportedArchivePathLocal = join(exportsPathLocal, xcArchiveName);
 	const plistPath = join(exportedArchivePathLocal, 'ExportOptions.plist');
 	const exportedAppPath = join(exportedArchivePathLocal, `${productName}.app`);
+	const archivedDsymPath = join(xcArchivePath, 'dSYMs', `${productName}.app.dSYM`);
+	const exportedDsymPath = join(exportedArchivePathLocal, `${productName}.app.dSYM`);
 
 	green(`Export path: ${exportedArchivePathLocal}`);
 	mkdirSync(exportedArchivePathLocal, {recursive: true});
@@ -44,7 +48,14 @@ export const exportApp = async ({
 `);
 	await execa({cwd: srcDir})`xcodebuild -exportArchive -archivePath ${xcArchivePath} -exportPath ${exportedArchivePathLocal} -exportOptionsPlist ${plistPath}`;
 
-	green(`App exported: ${exportedAppPath}`);
+	if (!existsSync(archivedDsymPath)) {
+		throw new Error(`Archived dSYM not found at ${archivedDsymPath}`);
+	}
 
-	return {exportedAppPath};
+	cpSync(archivedDsymPath, exportedDsymPath, {recursive: true});
+
+	green(`App exported: ${exportedAppPath}`);
+	green(`dSYM exported: ${exportedDsymPath}`);
+
+	return {exportedAppPath, exportedDsymPath};
 };

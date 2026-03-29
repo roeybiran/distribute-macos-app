@@ -55,6 +55,7 @@ const {dmg} = await import('../../steps/make-dmg.js');
 let temporaryDir: string;
 let xcArchivePath: string;
 let exportedAppPath: string;
+let exportedDsymPath: string;
 let dmgPath: string;
 
 beforeAll(async () => {
@@ -86,6 +87,7 @@ beforeAll(async () => {
 		method: 'mac-application',
 	});
 	exportedAppPath = exportResult.exportedAppPath;
+	exportedDsymPath = exportResult.exportedDsymPath;
 
 	const dmgResult = await dmg({
 		exportedAppPath,
@@ -119,6 +121,12 @@ describe('pipeline integration', () => {
 		expect(exportedAppPath).toMatch(/DUMMY\.app$/);
 		expect(fs.existsSync(exportedAppPath)).toBe(true);
 		expect(fs.statSync(exportedAppPath).isDirectory()).toBe(true);
+	});
+
+	it('export copies DUMMY.app.dSYM into the exported version directory', () => {
+		expect(exportedDsymPath).toMatch(/DUMMY\.app\.dSYM$/);
+		expect(fs.existsSync(exportedDsymPath)).toBe(true);
+		expect(fs.statSync(exportedDsymPath).isDirectory()).toBe(true);
 	});
 
 	it('DMG file exists with correct name', () => {

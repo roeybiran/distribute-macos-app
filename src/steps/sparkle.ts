@@ -1,11 +1,16 @@
 import {
-	mkdirSync, copyFileSync,
+	mkdirSync, copyFileSync, readFileSync, writeFileSync,
 } from 'node:fs';
 import {join, basename} from 'node:path';
 import {execa} from 'execa';
+import MarkdownItConstructor from 'markdown-it';
 import {green} from '../util/colors.js';
 import {type BuildSettings} from '../util/get-build-settings.js';
 import {resolveAppcastToolPath} from '../util/preflight.js';
+
+const markdownIt = new (
+	MarkdownItConstructor as unknown as new () => {render(markdown: string): string}
+)();
 
 export const sparkle = async ({
 	dmgPath,
@@ -27,9 +32,10 @@ export const sparkle = async ({
 	mkdirSync(outDir, {recursive: true});
 
 	const dmgName = basename(dmgPath);
-	const releaseNotesPath = join(outDir, `${basename(dmgPath, '.dmg')}.md`);
+	const releaseNotesPath = join(outDir, `${basename(dmgPath, '.dmg')}.html`);
 	const targetDmgPath = join(outDir, dmgName);
-	copyFileSync(changelogPath, releaseNotesPath);
+	const releaseNotesMarkdown = readFileSync(changelogPath, 'utf8');
+	writeFileSync(releaseNotesPath, markdownIt.render(releaseNotesMarkdown));
 	green(`Copying DMG to ${targetDmgPath}...`);
 	copyFileSync(dmgPath, targetDmgPath);
 

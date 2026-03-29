@@ -50,7 +50,7 @@ npx -y @roeybiran/distribute-macos-app release \
   --out-dir releases
 ```
 
-When `--sparkle` is enabled, the source directory must include a `CHANGELOG.md` file. The tool copies that file next to the built DMG using the same basename, and `generate_appcast` picks it up natively as Markdown release notes.
+When `--sparkle` is enabled, the source directory must include a `CHANGELOG.md` file. The tool renders that file to a same-basename HTML file next to the built DMG, and `generate_appcast` picks it up as the release notes for that archive.
 
 ## Read More
 
