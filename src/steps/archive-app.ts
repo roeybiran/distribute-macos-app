@@ -30,8 +30,17 @@ export const archiveApp = async ({
 	green('Testing...');
 	const sharedArgs = ['-scheme', scheme, '-quiet'];
 	const testPlatform = 'platform=macOS,arch=arm64';
-	await execa({cwd: srcDir})`xcodebuild build-for-testing ${sharedArgs} -destination ${testPlatform}`;
-	await execa({cwd: srcDir})`xcodebuild test ${sharedArgs} -destination ${testPlatform}`;
+	try {
+		await execa({cwd: srcDir})`xcodebuild build-for-testing ${sharedArgs} -destination ${testPlatform}`;
+		await execa({cwd: srcDir})`xcodebuild test ${sharedArgs} -destination ${testPlatform}`;
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		if (!errorMessage.includes('There are no test bundles available to test.')) {
+			throw error;
+		}
+
+		green('No test bundles found. Skipping tests.');
+	}
 
 	green(`Archiving to: ${xcArchivePath}`);
 	await execa({cwd: srcDir})`xcodebuild archive ${sharedArgs} -destination ${releasePlatform} -configuration ${buildConfiguration} -archivePath ${xcArchivePath}`;

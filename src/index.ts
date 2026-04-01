@@ -44,7 +44,7 @@ program
 	)
 	.option(
 		'--out-dir <path>',
-		'Output directory for Sparkle release files',
+		'Output directory for final release files',
 	)
 	.option(
 		'--src-dir <path>',
@@ -91,8 +91,8 @@ program
 				throw new Error('--out-dir is required when --sparkle is provided.');
 			}
 
-			if (!shouldGenerateSparkle && (outDir ?? fullReleaseNotesUrl ?? appHomepage)) {
-				throw new Error('--out-dir, --full-release-notes-url, and --app-homepage can only be used with --sparkle.');
+			if (!shouldGenerateSparkle && (fullReleaseNotesUrl ?? appHomepage)) {
+				throw new Error('--full-release-notes-url and --app-homepage can only be used with --sparkle.');
 			}
 
 			green('Gathering build settings...');
@@ -134,6 +134,7 @@ program
 				xcArchivePath,
 				productName,
 				developmentTeam,
+				outputDir: shouldGenerateSparkle ? undefined : outDir,
 			});
 
 			const {dmgPath} = await dmg({

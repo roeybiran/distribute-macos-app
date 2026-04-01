@@ -57,6 +57,7 @@ let xcArchivePath: string;
 let exportedAppPath: string;
 let exportedDsymPath: string;
 let dmgPath: string;
+let releaseOutputDir: string;
 
 beforeAll(async () => {
 	temporaryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'distribute-test-'));
@@ -78,12 +79,14 @@ beforeAll(async () => {
 		productName: 'DUMMY',
 	});
 	xcArchivePath = archiveResult.xcArchivePath;
+	releaseOutputDir = path.join(temporaryDir, 'release-output');
 
 	const exportResult = await exportApp({
 		srcDir: temporaryDir,
 		xcArchivePath,
 		productName: 'DUMMY',
 		developmentTeam: 'FOO',
+		outputDir: releaseOutputDir,
 		method: 'mac-application',
 	});
 	exportedAppPath = exportResult.exportedAppPath;
@@ -121,6 +124,12 @@ describe('pipeline integration', () => {
 		expect(exportedAppPath).toMatch(/DUMMY\.app$/);
 		expect(fs.existsSync(exportedAppPath)).toBe(true);
 		expect(fs.statSync(exportedAppPath).isDirectory()).toBe(true);
+	});
+
+	it('export writes release artifacts under the provided output directory', () => {
+		expect(exportedAppPath.startsWith(releaseOutputDir)).toBe(true);
+		expect(exportedDsymPath.startsWith(releaseOutputDir)).toBe(true);
+		expect(dmgPath.startsWith(releaseOutputDir)).toBe(true);
 	});
 
 	it('export copies DUMMY.app.dSYM into the exported version directory', () => {

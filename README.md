@@ -12,6 +12,9 @@ npx -y @roeybiran/distribute-macos-app release \
   --keychain-profile notary-profile
 ```
 
+Optional release output:
+`--out-dir path/to/releases`
+
 Optional DMG customization:
 `--dmg-background path/to/background.png`
 
@@ -51,6 +54,8 @@ npx -y @roeybiran/distribute-macos-app release \
 ```
 
 When `--sparkle` is enabled, the source directory must include a `CHANGELOG.md` file. The tool renders that file to a same-basename HTML file next to the built DMG, and `generate_appcast` picks it up as the release notes for that archive.
+
+Without `--sparkle`, `--out-dir` changes where the versioned export folder is created. That folder includes the exported `.app`, its `.dSYM`, and the final `.dmg`.
 
 ## Read More
 

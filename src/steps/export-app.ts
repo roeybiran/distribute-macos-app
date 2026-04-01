@@ -1,7 +1,7 @@
 import {
 	writeFileSync, mkdirSync, existsSync, cpSync,
 } from 'node:fs';
-import {join, basename} from 'node:path';
+import {join, basename, resolve} from 'node:path';
 import {execa} from 'execa';
 import {green} from '../util/colors.js';
 import {exportsPath} from '../constants.js';
@@ -11,6 +11,7 @@ export const exportApp = async ({
 	xcArchivePath,
 	productName,
 	developmentTeam,
+	outputDir,
 	// Override for integration tests: 'mac-application' works without a Developer ID cert.
 	// Production always uses the default.
 	method = 'developer-id',
@@ -19,10 +20,11 @@ export const exportApp = async ({
 	xcArchivePath: string;
 	productName: string;
 	developmentTeam: string;
+	outputDir?: string;
 	method?: string;
 }): Promise<{exportedAppPath: string; exportedDsymPath: string}> => {
 	const xcArchiveName = basename(xcArchivePath, '.xcarchive');
-	const exportsPathLocal = join(srcDir, exportsPath);
+	const exportsPathLocal = outputDir ? resolve(outputDir) : join(srcDir, exportsPath);
 	const exportedArchivePathLocal = join(exportsPathLocal, xcArchiveName);
 	const plistPath = join(exportedArchivePathLocal, 'ExportOptions.plist');
 	const exportedAppPath = join(exportedArchivePathLocal, `${productName}.app`);
