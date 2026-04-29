@@ -27,8 +27,18 @@ describe('sparkle', () => {
 		vi.clearAllMocks();
 	});
 
-	it('renders CHANGELOG.md to same-basename html release notes', async () => {
-		vi.mocked(readFileSync).mockReturnValue('# Release Notes\n\n- Added feature');
+	it('copies CHANGELOG.md to same-basename markdown release notes', async () => {
+		const changelogMarkdown = `# Changelog
+
+## 1.0
+
+- Added feature
+
+## 0.9
+
+- Previous feature
+`;
+		vi.mocked(readFileSync).mockReturnValue(changelogMarkdown);
 		const buildSettings = Object.fromEntries([
 			['BUILD_DIR', '/tmp/project/.build/Build/Products'],
 			['CODE_SIGN_IDENTITY', ''],
@@ -47,8 +57,8 @@ describe('sparkle', () => {
 		});
 
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
-			'/tmp/releases/DUMMY 1.0.html',
-			expect.stringContaining('<h1>Release Notes</h1>'),
+			'/tmp/releases/DUMMY 1.0.md',
+			changelogMarkdown,
 		);
 		expect(vi.mocked(copyFileSync)).toHaveBeenCalledWith(
 			'/tmp/releases/DUMMY 1.0.dmg',
