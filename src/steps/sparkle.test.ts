@@ -27,18 +27,23 @@ describe('sparkle', () => {
 		vi.clearAllMocks();
 	});
 
-	it('copies CHANGELOG.md to same-basename markdown release notes', async () => {
-		const changelogMarkdown = `# Changelog
+	it('writes each changelog version to same-basename markdown release notes and full-history JSON', async () => {
+		vi.mocked(readFileSync).mockReturnValue(`# Changelog
 
-## 1.0
+## ??? - ???
+
+- Draft note
+
+## 1.0 - 2026-05-02
 
 - Added feature
 
 ## 0.9
 
+Date: 2026-04-01
+
 - Previous feature
-`;
-		vi.mocked(readFileSync).mockReturnValue(changelogMarkdown);
+`);
 		const buildSettings = Object.fromEntries([
 			['BUILD_DIR', '/tmp/project/.build/Build/Products'],
 			['CODE_SIGN_IDENTITY', ''],
@@ -58,7 +63,30 @@ describe('sparkle', () => {
 
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
 			'/tmp/releases/DUMMY 1.0.md',
-			changelogMarkdown,
+			'## 1.0\n\n- Added feature\n',
+		);
+		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
+			'/tmp/releases/DUMMY 0.9.md',
+			'## 0.9\n\n- Previous feature\n',
+		);
+		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
+			'/tmp/releases/release-notes.json',
+			`${JSON.stringify([
+				{
+					body: '- Added feature',
+					date: '2026-05-02',
+					version: '1.0',
+				},
+				{
+					body: '- Previous feature',
+					date: '2026-04-01',
+					version: '0.9',
+				},
+			], null, 2)}\n`,
+		);
+		expect(vi.mocked(writeFileSync)).not.toHaveBeenCalledWith(
+			'/tmp/releases/DUMMY ???.md',
+			expect.any(String),
 		);
 		expect(vi.mocked(copyFileSync)).toHaveBeenCalledWith(
 			'/tmp/releases/DUMMY 1.0.dmg',
