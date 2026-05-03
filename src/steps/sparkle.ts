@@ -3,6 +3,7 @@ import {
 } from 'node:fs';
 import {join, basename} from 'node:path';
 import {execa} from 'execa';
+import MarkdownIt from 'markdown-it';
 import {green} from '../util/colors.js';
 import {type BuildSettings} from '../util/get-build-settings.js';
 import {resolveAppcastToolPath} from '../util/preflight.js';
@@ -37,6 +38,7 @@ export const sparkle = async ({
 	const changelogMarkdown = readFileSync(changelogPath, 'utf8');
 	const releaseHeadingMatches = [...changelogMarkdown.matchAll(/^##\s+(.+)\s*$/gm)]
 		.filter(releaseHeadingMatch => releaseHeadingMatch[1].trim().length > 0);
+	const markdownIt = new MarkdownIt();
 	const releaseNotes: ReleaseNote[] = [];
 
 	for (const [releaseIndex, releaseHeadingMatch] of releaseHeadingMatches.entries()) {
@@ -58,9 +60,8 @@ export const sparkle = async ({
 			continue;
 		}
 
-		const releaseNotesPath = join(outDir, `${buildSettings.PRODUCT_NAME} ${releaseVersion}.md`);
-		const releaseNotesMarkdown = `## ${releaseVersion}\n\n${releaseNotesBody}\n`;
-		writeFileSync(releaseNotesPath, releaseNotesMarkdown);
+		const releaseNotesPath = join(outDir, `${buildSettings.PRODUCT_NAME} ${releaseVersion}.html`);
+		writeFileSync(releaseNotesPath, markdownIt.render(releaseNotesBody));
 
 		if (releaseDate && releaseDate !== '???') {
 			releaseNotes.push({

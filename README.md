@@ -53,7 +53,7 @@ npx -y @roeybiran/distribute-macos-app release \
   --out-dir releases
 ```
 
-When `--sparkle` is enabled, the source directory must include a `CHANGELOG.md` file. Use `## VERSION - YYYY-MM-DD` headings for released versions. The tool writes each released version to a same-basename markdown file next to the built DMG files, writes the full public history to `release-notes.json`, and `generate_appcast` picks up the per-version markdown files as release notes for their matching archives.
+When `--sparkle` is enabled, the source directory must include a `CHANGELOG.md` file. Use `## VERSION - YYYY-MM-DD` headings for released versions. The headings delimit releases; the generated per-version HTML files contain only the rendered release body, without a document wrapper. The tool writes each released version to a same-basename HTML file next to the built DMG files, writes the full public history to `release-notes.json`, and `generate_appcast` picks up the per-version HTML files as release notes for their matching archives.
 
 Without `--sparkle`, `--out-dir` changes where the versioned export folder is created. That folder includes the exported `.app`, its `.dSYM`, and the final `.dmg`.
 

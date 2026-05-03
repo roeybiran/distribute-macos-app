@@ -27,7 +27,7 @@ describe('sparkle', () => {
 		vi.clearAllMocks();
 	});
 
-	it('writes each changelog version to same-basename markdown release notes and full-history JSON', async () => {
+	it('writes each changelog version to same-basename HTML release notes and full-history JSON', async () => {
 		vi.mocked(readFileSync).mockReturnValue(`# Changelog
 
 ## ??? - ???
@@ -62,12 +62,12 @@ Date: 2026-04-01
 		});
 
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
-			'/tmp/releases/DUMMY 1.0.md',
-			'## 1.0\n\n- Added feature\n',
+			'/tmp/releases/DUMMY 1.0.html',
+			'<ul>\n<li>Added feature</li>\n</ul>\n',
 		);
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
-			'/tmp/releases/DUMMY 0.9.md',
-			'## 0.9\n\n- Previous feature\n',
+			'/tmp/releases/DUMMY 0.9.html',
+			'<ul>\n<li>Previous feature</li>\n</ul>\n',
 		);
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
 			'/tmp/releases/release-notes.json',
@@ -85,7 +85,7 @@ Date: 2026-04-01
 			], null, 2)}\n`,
 		);
 		expect(vi.mocked(writeFileSync)).not.toHaveBeenCalledWith(
-			'/tmp/releases/DUMMY ???.md',
+			'/tmp/releases/DUMMY ???.html',
 			expect.any(String),
 		);
 		expect(vi.mocked(copyFileSync)).toHaveBeenCalledWith(
