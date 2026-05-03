@@ -37,6 +37,7 @@ describe('sparkle', () => {
 ## 1.0 - 2026-05-02
 
 - Added feature
+- Use <kbd>Page Up</kbd>
 
 ## 0.9
 
@@ -63,7 +64,7 @@ Date: 2026-04-01
 
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
 			'/tmp/releases/DUMMY 1.0.html',
-			'<ul>\n<li>Added feature</li>\n</ul>\n',
+			'<ul>\n<li>Added feature</li>\n<li>Use <kbd>Page Up</kbd></li>\n</ul>\n',
 		);
 		expect(vi.mocked(writeFileSync)).toHaveBeenCalledWith(
 			'/tmp/releases/DUMMY 0.9.html',
@@ -73,7 +74,7 @@ Date: 2026-04-01
 			'/tmp/releases/release-notes.json',
 			`${JSON.stringify([
 				{
-					body: '- Added feature',
+					body: '- Added feature\n- Use <kbd>Page Up</kbd>',
 					date: '2026-05-02',
 					version: '1.0',
 				},

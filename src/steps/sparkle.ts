@@ -38,7 +38,7 @@ export const sparkle = async ({
 	const changelogMarkdown = readFileSync(changelogPath, 'utf8');
 	const releaseHeadingMatches = [...changelogMarkdown.matchAll(/^##\s+(.+)\s*$/gm)]
 		.filter(releaseHeadingMatch => releaseHeadingMatch[1].trim().length > 0);
-	const markdownIt = new MarkdownIt();
+	const markdownIt = new MarkdownIt({html: true});
 	const releaseNotes: ReleaseNote[] = [];
 
 	for (const [releaseIndex, releaseHeadingMatch] of releaseHeadingMatches.entries()) {
